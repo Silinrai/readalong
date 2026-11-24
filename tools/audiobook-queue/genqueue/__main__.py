@@ -90,6 +90,10 @@ def main(argv=None) -> None:
     for note in worker.recover():
         print("recovered:", note)
     worker.start()
+    from .inbox import Inbox
+    inbox = Inbox(store, DATA, nudge=worker.nudge, log=lambda m: print(m, flush=True))
+    inbox.start()
+    print(f"Drop EPUBs in: {inbox.root}", flush=True)
     api = Api(store, worker, DATA, backend)
     httpd = serve(api, args.host, args.port)
     print(f"Readalong queue on port {args.port}. Pairing code: {get_token(store)}")

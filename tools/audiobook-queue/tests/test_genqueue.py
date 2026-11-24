@@ -451,8 +451,8 @@ def test_passage_profile_is_reused_across_restarts(tmp_path, monkeypatch):
     from genqueue import backend as b
 
     listed = [{"id": "orig1", "name": "Voice"},
-              {"id": "pp-old", "name": "Voice (15 s passage, Readalong)", "created_at": 1},
-              {"id": "pp-new", "name": "Voice (15 s passage, Readalong)", "created_at": 2}]
+              {"id": "pp-old", "name": "Voice (v2 passage, Readalong)", "created_at": 1},
+              {"id": "pp-new", "name": "Voice (v2 passage, Readalong)", "created_at": 2}]
     posts = []
 
     class R:
@@ -468,8 +468,94 @@ def test_passage_profile_is_reused_across_restarts(tmp_path, monkeypatch):
     wav.write_bytes(b"")
     prof = {"id": "orig1", "name": "Voice", "language": "en"}
     # Stored id still exists: kept.
-    assert be._ensure_passage_profile({"wav": str(wav), "ref_text": "x", "passage_profile_id": "pp-new"},
+    assert be._ensure_passage_profile({"wav": str(wav), "ref_text": "x", "passage_profile_id": "pp-new", "version": 2},
                                       prof)["passage_profile_id"] == "pp-new"
     # No stored id: the oldest existing copy, nothing uploaded.
-    assert be._ensure_passage_profile({"wav": str(wav), "ref_text": "x"}, prof)["passage_profile_id"] == "pp-old"
+    assert be._ensure_passage_profile({"wav": str(wav), "ref_text": "x", "version": 2}, prof)["passage_profile_id"] == "pp-old"
     assert posts == []
+
+
+def test_voice_reference_starts_and_ends_on_a_pause():
+    """A reference cut mid-word made OmniVoice say the cut word ("much.")
+    before every sentence of book 6."""
+    import numpy as np
+    from genqueue.backend import RenderBackend
+    sr = 24000
+    rng = np.random.default_rng(1)
+    talk = lambda s: rng.uniform(-0.4, 0.4, int(sr * s)).astype(np.float32)
+    hush = lambda s: np.zeros(int(sr * s), np.float32)
+    # Sentences of 4.4, 4.6, 3.5, 5.9, 4.0 s, with pauses between, as in the real clip.
+    audio = np.concatenate([talk(4.4), hush(0.35), talk(4.6), hush(0.45), talk(3.5), hush(0.4),
+                            talk(5.9), hush(0.6), talk(4.0), hush(0.3), talk(9.0)])
+    wins = RenderBackend.pause_windows(audio, sr)
+    assert wins
+    for a, b in wins:
+        assert RenderBackend.MIN_S <= (b - a) / sr <= RenderBackend.MAX_S
+        for edge in (audio[max(a - 1, 0):a + 240], audio[b - 240:b]):   # 10 ms at each cut
+            assert np.abs(edge).max() < 1e-6, "cut lands in speech"
+    # The old fixed 15 s cut at 15.0 s falls inside the fourth sentence.
+    assert np.abs(audio[int(15.0 * sr) - 240:int(15.0 * sr)]).max() > 0.1
+
+
+def test_old_clipped_reference_is_replaced(tmp_path, monkeypatch):
+    from genqueue import backend as b
+    listed = [{"id": "old", "name": "Voice (15 s passage, Readalong)", "created_at": 1}]
+    posts = []
+
+    class R:
+        def __init__(self, data): self.data = data
+        def raise_for_status(self): pass
+        def json(self): return self.data
+
+    monkeypatch.setattr(b.requests, "get", lambda *a, **k: R(listed))
+    monkeypatch.setattr(b.requests, "post", lambda *a, **k: posts.append(a) or R({"id": "new"}))
+    be = b.RenderBackend()
+    monkeypatch.setattr(be, "voices_dir", lambda: tmp_path)
+    wav = tmp_path / "v.wav"
+    wav.write_bytes(b"")
+    # A rebuilt (version 2) reference: the old mid-word "15 s passage" copy is not reused.
+    meta = be._ensure_passage_profile({"wav": str(wav), "ref_text": "x", "version": 2},
+                                      {"id": "orig", "name": "Voice", "language": "en"})
+    assert meta["passage_profile_id"] == "new" and len(posts) == 1
+
+
+def test_drop_folder_queues_settled_epubs_and_delivers_finished_ones(env):
+    from genqueue.inbox import Inbox
+    store, tmp = env
+    nudged = []
+    box = Inbox(store, tmp, tmp / "Inbox", settle=10, nudge=lambda: nudged.append(1), log=lambda m: None)
+    book = make_epub(tmp / "Inbox" / "dropped.epub", "Dropped Book")
+    (tmp / "Inbox" / "notes.epub").write_text("not a zip")
+
+    assert box.scan(now=100) == []                # first sight: maybe still copying
+    assert box.scan(now=105) == []                # not settled for 10 s yet
+    notes = box.scan(now=111)
+    assert "queued: Dropped Book" in notes
+    job = next(j for j in store.all() if j.title == "Dropped Book")
+    assert job.state == "waiting" and job.profile == "" and nudged
+    assert not book.exists() and (tmp / "Inbox" / "Added" / "dropped.epub").exists()
+    assert (tmp / "Inbox" / "Problems" / "notes.epub").exists()
+    assert (tmp / "Inbox" / "Problems" / "notes.txt").exists()
+
+    # Dropping the same book again doesn't queue it twice.
+    make_epub(tmp / "Inbox" / "again.epub", "Dropped Book")
+    box.scan(now=200)
+    assert box.scan(now=220) == ["already queued: Dropped Book"]
+    assert sum(j.title == "Dropped Book" for j in store.all()) == 1
+
+    # A file still growing is left alone.
+    growing = tmp / "Inbox" / "big.epub"
+    growing.write_bytes(b"PK" * 10)
+    box.scan(now=300)
+    growing.write_bytes(b"PK" * 20)
+    assert box.scan(now=320) == [] and growing.exists()
+
+    out = tmp / "out" / "dropped.narrated.epub"
+    out.parent.mkdir()
+    out.write_bytes(b"narrated")
+    for state in ("importing", "processing", "completed"):
+        store.update(job.id, state=state)
+    store.update(job.id, output_epub=str(out))
+    assert box.deliver() == ["finished: Dropped Book (narrated).epub"]
+    assert (tmp / "Inbox" / "Finished" / "Dropped Book (narrated).epub").read_bytes() == b"narrated"
+    assert box.deliver() == []                    # unchanged: not copied again

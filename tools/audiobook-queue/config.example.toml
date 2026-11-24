@@ -56,3 +56,8 @@ tail = 1200
 mp3_kbps = 96
 trim_db = -42            # trim engine silence quieter than this (relative to peak)
 keep_wav = false
+
+[queue]
+# Drop EPUBs in this folder to have them voiced; Added/, Problems/ and
+# Finished/ are made inside it. Empty = "Audiobook Inbox" next to this file.
+inbox = ''

@@ -57,8 +57,29 @@ queue, the submitted books and covers live in `queue_data\`, and finished
 sentences are cached in `cache\`, so a restart or a retry never voices the
 same sentence twice.
 
-To start it with Windows, add a Task Scheduler task "At log on" that runs the
-`serve` command above with `tools\audiobook-queue` as the start folder.
+### Keep it running on its own
+
+The watchdog keeps voicing going with nobody at the PC. It's a Windows task
+that runs at log on and every 10 minutes. It starts VoiceStudio if it's
+closed, starts the queue if it doesn't answer, and puts back the Tailscale
+forwarding below. It only ever starts things, never stops them. Install it
+once:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File genqueue\install-watchdog.ps1 -VoiceStudio "C:\path\to\VoiceStudio.exe"
+```
+
+Its log is `queue_data\watchdog.log`. The PC has to be on and signed in, so
+turn off sleep while it's plugged in.
+
+### Drop folder
+
+Put an EPUB in `Audiobook Inbox\`, which is next to this file unless you set a
+different `inbox` under `[queue]` in `config.toml`. Within about 30 s it's
+queued with the default voice (`profile_name`), and the original moves to
+`Added\`. A file that isn't a readable EPUB goes to `Problems\` with a note
+saying why. Each finished audiobook is copied to `Finished\` as "<title>
+(narrated).epub", and copied again if the book is re-voiced.
 
 ## 4. Reach it from the phone (Tailscale)
 
@@ -96,10 +117,14 @@ name). Then enter the pairing code. Turn it off with
 - If VoiceStudio stops answering, the book waits and resumes by itself; it
   isn't marked failed. A failed chapter is recorded and the book carries on;
   Retry voices only what's missing.
-- Voice profiles with a clip longer than 20 s: the queue saves the clip's
-  best 15 s passage as its own VoiceStudio profile ("<name> (15 s passage,
-  Readalong)") with a transcript, so VoiceStudio doesn't transcribe the clip
-  on every sentence (that costs ~50 s per sentence when the GPU is full).
+- **The voice clip:** use 8 to 20 s of clean speech made of whole sentences,
+  with a short silence at the start and the end. The model carries on from
+  where the clip ends, so a clip cut mid-word puts that word before every
+  sentence. Profiles with a longer clip are cut down for you, always between
+  sentences. The queue saves that passage as its own VoiceStudio profile
+  ("<name> (v2 passage, Readalong)") with a transcript, so VoiceStudio doesn't
+  transcribe the clip on every sentence. Transcribing costs about 50 s per
+  sentence when the GPU is full.
 - If voicing gets slow, check VoiceStudio's log for "whisperx transcribing"
   lines and for other programs transcribing through it.
 - Tests: `.venv\Scripts\python.exe -m pytest tests`.
