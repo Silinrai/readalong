@@ -28,25 +28,6 @@ folded), with the same code running on desktop and the web.
   alignment), tap zones per page, foldable-aware layout, sleep timer with a
   fade-out, and reading and listening statistics.
 
-## Building the Android app (Windows)
-
-Needs Node 24 with pnpm, Rust (with the `aarch64-linux-android` target), a
-JDK 17+, and the Android SDK with the NDK (Android Studio > SDK Manager).
-The app icon is written from `data/icons/` by `scripts/android-icons.py`,
-which needs Python with Pillow (`pip install pillow`).
-
-```powershell
-pnpm install
-powershell -ExecutionPolicy Bypass -File scripts\build-android-readalong.ps1
-# -> dist\Readalong-arm64.apk
-```
-
-The first build signs the APK with a key it creates in
-`%USERPROFILE%\.readalong\`. Keep that key: updates must be signed with the
-same one. For development, `pnpm dev-web` runs the reader at
-http://localhost:3000. Checks: `pnpm test` (Vitest) and `pnpm lint`
-(Biome + TypeScript).
-
 ## Voicing books on your PC
 
 `tools/audiobook-queue/` turns an EPUB into a narrated EPUB (EPUB 3 Media
