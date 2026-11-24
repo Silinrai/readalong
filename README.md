@@ -32,6 +32,8 @@ folded), with the same code running on desktop and the web.
 
 Needs Node 24 with pnpm, Rust (with the `aarch64-linux-android` target), a
 JDK 17+, and the Android SDK with the NDK (Android Studio > SDK Manager).
+The app icon is written from `data/icons/` by `scripts/android-icons.py`,
+which needs Python with Pillow (`pip install pillow`).
 
 ```powershell
 pnpm install
