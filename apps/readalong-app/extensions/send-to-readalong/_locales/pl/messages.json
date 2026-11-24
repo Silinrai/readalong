@@ -1,0 +1,14 @@
+{
+  "app_name": {
+    "message": "Wyślij do Readalong",
+    "description": "Extension name shown in the browser toolbar and the Chrome Web Store listing."
+  },
+  "app_description": {
+    "message": "Zapisuj strony internetowe w bibliotece Readalong",
+    "description": "Short description shown in the Chrome Web Store listing."
+  },
+  "action_title": {
+    "message": "Wyślij do Readalong",
+    "description": "Tooltip on the toolbar action button."
+  }
+}

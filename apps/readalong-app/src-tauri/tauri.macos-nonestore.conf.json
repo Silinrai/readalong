@@ -1,0 +1,7 @@
+{
+  "bundle": {
+    "macOS": {
+      "entitlements": "./profiles/direct-entitlements.plist"
+    }
+  }
+}

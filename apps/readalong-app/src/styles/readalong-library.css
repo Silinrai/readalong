@@ -1,0 +1,253 @@
+/* Readalong library looks. The library page sets data-library-look on itself:
+   'shelf' (wooden bookshelf, the default), 'cozy' (reading room) or 'plain'
+   (Readalong's own). Only grid rows are restyled; lists stay as they are. */
+
+.library-page[data-library-look='shelf'],
+.library-page[data-library-look='cozy'] {
+  --ra-wall: #f1e6d2;
+  --ra-ink: #4a3320;
+  --ra-ink-soft: #7a5b40;
+  --ra-card: rgba(255, 250, 240, 0.72);
+  --ra-card-edge: rgba(120, 80, 40, 0.28);
+  --ra-plank-shadow: rgba(60, 30, 10, 0.45);
+  --ra-texture: url('/images/readalong/old-paper.svg');
+  --ra-veil: rgba(241, 230, 210, 0.45);
+}
+
+html[data-theme$='-dark'] .library-page[data-library-look='shelf'],
+html[data-theme$='-dark'] .library-page[data-library-look='cozy'] {
+  --ra-wall: #241a13;
+  --ra-ink: #ead9c0;
+  --ra-ink-soft: #bfa587;
+  --ra-card: rgba(58, 39, 28, 0.72);
+  --ra-card-edge: rgba(234, 200, 150, 0.18);
+  --ra-plank-shadow: rgba(0, 0, 0, 0.6);
+  --ra-texture: url('/images/readalong/night-paper.svg');
+  --ra-veil: rgba(36, 26, 19, 0.6);
+}
+
+html:not([data-eink='true']) .library-page[data-library-look='shelf'],
+html:not([data-eink='true']) .library-page[data-library-look='cozy'] {
+  background-color: var(--ra-wall);
+  background-image: linear-gradient(var(--ra-veil), var(--ra-veil)), var(--ra-texture);
+  background-size:
+    auto,
+    400px 400px;
+}
+
+/* Serif titles, warm ink. */
+.library-page[data-library-look='shelf'] .library-grid-item h4,
+.library-page[data-library-look='cozy'] .library-grid-item h4 {
+  font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+  font-weight: 600;
+  color: var(--ra-ink);
+}
+.library-page[data-library-look='shelf'] .library-grid-item .text-neutral-content,
+.library-page[data-library-look='cozy'] .library-grid-item .text-neutral-content {
+  color: var(--ra-ink-soft);
+}
+
+/* --- Wooden bookshelf -------------------------------------------------- */
+/* One bookcase behind the whole list (useShelfBackdrop.ts measures the row
+   spacing): a plank under every row, repeating to the bottom of the screen so
+   empty shelves wait for more books, with wooden sides. Books stand on the
+   planks; the shelf look shows covers only. */
+.library-page[data-library-look='shelf'] {
+  --ra-plank-top: #c48d55;
+  --ra-plank: #9b6a3b;
+  --ra-plank-dark: #74491f;
+  --ra-plank-edge: #4c2e14;
+  --ra-case-side: #6e4524;
+  --ra-brass: #f2c27c;
+  --ra-progress-track: rgba(20, 10, 2, 0.6);
+}
+html[data-theme$='-dark'] .library-page[data-library-look='shelf'] {
+  --ra-plank-top: #8a6038;
+  --ra-plank: #6b4727;
+  --ra-plank-dark: #4f3219;
+  --ra-plank-edge: #2e1b0b;
+  --ra-case-side: #3f2814;
+}
+/* The empty shelves below the last row: one layer that starts at the list's
+   end (--ra-shelf-tail) and repeats inside itself, so nothing is drawn above
+   it. When the list goes on past the screen the tail is 100%: no layer. */
+.library-page[data-library-look='shelf'] [data-virtuoso-scroller][data-ra-shelf='on'] {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent var(--ra-shelf-plank-y),
+    var(--ra-plank-top) var(--ra-shelf-plank-y),
+    var(--ra-plank) calc(var(--ra-shelf-plank-y) + 3px),
+    var(--ra-plank-dark) calc(var(--ra-shelf-plank-y) + 12px),
+    var(--ra-plank-edge) calc(var(--ra-shelf-plank-y) + 15px),
+    rgba(30, 15, 5, 0.32) calc(var(--ra-shelf-plank-y) + 15px),
+    transparent calc(var(--ra-shelf-plank-y) + 28px),
+    transparent var(--ra-shelf-pitch)
+  );
+  background-size: 100% max(0px, calc(100% - var(--ra-shelf-tail)));
+  background-position: 0 var(--ra-shelf-tail);
+  background-repeat: no-repeat;
+  /* Scrolls with the books. */
+  background-attachment: local;
+  box-shadow:
+    inset 10px 0 0 var(--ra-case-side),
+    inset -10px 0 0 var(--ra-case-side),
+    inset 16px 0 10px -6px rgba(0, 0, 0, 0.35),
+    inset -16px 0 10px -6px rgba(0, 0, 0, 0.35);
+}
+/* Covers only, standing on the plank: equal rows keep the planks aligned. */
+.library-page[data-library-look='shelf'] .bookshelf-items[data-shelf-layout='grid'] {
+  align-items: end;
+  padding-top: 14px;
+  padding-bottom: 30px;
+}
+/* Each row's own plank, under its covers, between the bookcase sides. */
+.library-page[data-library-look='shelf'] [data-ra-shelf='on']
+  .bookshelf-items[data-shelf-layout='grid'] {
+  position: relative;
+}
+.library-page[data-library-look='shelf']
+  [data-ra-shelf='on']
+  .bookshelf-items[data-shelf-layout='grid']::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: var(--ra-shelf-plank-y);
+  height: 28px;
+  background: linear-gradient(
+    to bottom,
+    var(--ra-plank-top) 0,
+    var(--ra-plank) 3px,
+    var(--ra-plank-dark) 12px,
+    var(--ra-plank-edge) 15px,
+    rgba(30, 15, 5, 0.32) 15px,
+    transparent 28px
+  );
+  pointer-events: none;
+}
+.library-page[data-library-look='shelf'] .library-grid-item > :not(.bookitem-main) {
+  display: none;
+}
+.library-page[data-library-look='shelf'] .library-grid-item .bookitem-main {
+  overflow: visible;
+}
+.library-page[data-library-look='shelf'] .library-grid-item .bookitem-main img {
+  box-shadow:
+    2px 0 0 rgba(0, 0, 0, 0.12),
+    5px 4px 10px rgba(30, 15, 5, 0.4);
+}
+
+/* --- Cozy reading room -------------------------------------------------- */
+.library-page[data-library-look='cozy'] .bookshelf-items[data-shelf-layout='grid'] {
+  row-gap: 14px;
+}
+.library-page[data-library-look='cozy'] .library-grid-item {
+  padding: 8px 8px 6px;
+  border-radius: 14px;
+  background: var(--ra-card);
+  border: 1px solid var(--ra-card-edge);
+  box-shadow: 0 6px 14px -8px rgba(60, 30, 10, 0.35);
+}
+.library-page[data-library-look='cozy'] .library-grid-item .bookitem-main,
+.library-page[data-library-look='cozy'] .library-grid-item .bookitem-main img {
+  border-radius: 6px;
+}
+
+/* --- Reading progress on covers (shelf look) ---------------------------- */
+/* A slim brass line along the cover's foot: which books are under way, at a
+   glance, without printing text over the cover art. */
+.ra-cover-progress {
+  display: none;
+}
+.library-page[data-library-look='shelf'] .ra-cover-progress {
+  display: block;
+  position: absolute;
+  /* Inset on the cover, clear of the plank it stands on. */
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  height: 4px;
+  z-index: 1;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--ra-progress-track);
+  box-shadow: 0 0 0 1px rgba(255, 240, 220, 0.25);
+  pointer-events: none;
+}
+.library-page[data-library-look='shelf'] .ra-cover-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ra-brass);
+}
+html[data-eink='true'] .library-page[data-library-look='shelf'] .ra-cover-progress {
+  background: var(--color-base-100, #fff);
+  border: 1px solid currentColor;
+  box-shadow: none;
+  height: 5px;
+}
+html[data-eink='true'] .library-page[data-library-look='shelf'] .ra-cover-progress-fill {
+  background: currentColor;
+}
+
+/* Continue card (readalong/library/ContinueCard.tsx): the book read most
+   recently, above the shelves. */
+.ra-continue-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: calc(100% - 2rem);
+  max-width: 40rem;
+  margin: 0.5rem 1rem 0.25rem;
+  padding: 0.625rem 0.875rem 0.625rem 0.625rem;
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--color-base-100) 88%, transparent);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.12);
+  color: var(--color-base-content);
+  text-align: start;
+}
+.ra-continue-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+html[data-eink='true'] .ra-continue-card {
+  background: var(--color-base-100);
+  border: 1px solid var(--color-base-content);
+  box-shadow: none;
+}
+.ra-continue-cover {
+  flex: none;
+  width: 3.5rem;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: 0.375rem;
+}
+@media (min-width: 700px) {
+  .ra-continue-cover {
+    width: 4.5rem;
+  }
+}
+.ra-continue-track {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--color-base-content) 15%, transparent);
+}
+.ra-continue-fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  background: var(--color-primary);
+}
+.ra-continue-play {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+}

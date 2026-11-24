@@ -1,0 +1,58 @@
+# Copy to config.toml and fill in your voice (see README.md).
+# Render settings for the proof of concept. Paths are relative to this file.
+
+# "voicestudio" = the expressive engine. "sapi" = Windows' built-in voice, only
+# for testing the pipeline / sync without VoiceStudio running.
+backend = "voicestudio"
+
+[voicestudio]
+url = "http://127.0.0.1:3900"
+# Pick after listening to compare_engines.py: "indextts2", "cosyvoice", "omnivoice", ...
+engine = "omnivoice"
+voice_wav = "samples/voice.wav"   # or a reference clip of the voice
+# Transcript of voice.wav (helps cloning). Only used when the clip is <= 20 s;
+# for longer clips VoiceStudio picks and transcribes the best passage itself.
+ref_text = ""
+# Saved VoiceStudio voice profile, looked up by name (wins over voice_wav).
+profile_name = ""          # your VoiceStudio voice profile
+profile_id = ""          # or give the profile id directly
+timeout_s = 900
+
+# Sent with every /generate request (any engine).
+[voicestudio.options]
+seed = 4242              # same seed every sentence -> same timbre throughout
+effect_preset = "broadcast"
+language = "en"
+
+# Extra fields per engine.
+[voicestudio.engine_options.indextts2]
+
+[voicestudio.engine_options.cosyvoice]
+instruct = "Read this like a warm, engaging audiobook narrator, with natural expression."
+
+[voicestudio.engine_options.omnivoice]
+
+[expression]
+# IndexTTS 2: infer the emotion of each sentence from its own text (emo_text),
+# applied at emo_alpha strength (0-1; VoiceStudio suggests <= 0.6).
+emotion_from_text = true
+emo_alpha = 0.6
+
+[sapi]
+voice = "Zira"
+rate = 0
+
+# Silence placed between sentences (ms). This is what makes it breathe like a
+# narrator rather than a list of sentences.
+[gaps]
+lead_in = 400
+sentence = 320
+paragraph = 750
+after_heading = 1300
+scene_break = 1600
+tail = 1200
+
+[audio]
+mp3_kbps = 96
+trim_db = -42            # trim engine silence quieter than this (relative to peak)
+keep_wav = false

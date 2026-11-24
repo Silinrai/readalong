@@ -1,0 +1,3 @@
+pnpm -C apps/readalong-app format:check
+pnpm -C apps/readalong-app lint
+pnpm -C apps/readalong-app test

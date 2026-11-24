@@ -1,0 +1,10 @@
+# Your settings, books, voice clips and everything the queue produces stay local.
+config.toml
+books/
+out/
+cache/
+queue_data/
+samples/
+__pycache__/
+.pytest_cache/
+*.pyc

@@ -1,0 +1,15 @@
+export type AnnotationToolType =
+  | 'copy'
+  | 'copylink'
+  | 'highlight'
+  | 'annotate'
+  | 'search'
+  | 'dictionary'
+  | 'contextdictionary'
+  | 'systemdictionary'
+  | 'vocabulary'
+  | 'translate'
+  | 'tts'
+  | 'proofread'
+  | 'share'
+  | 'quotecard';

@@ -1,0 +1,13 @@
+Readalong
+
+Readalong is a modified version of Readest, Copyright (C) Bilingify LLC,
+licensed under the GNU Affero General Public License v3.0
+(https://github.com/readest/readest). Modified 2026.
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, version 3. It is distributed WITHOUT ANY WARRANTY; see
+the LICENSE file for details.
+
+Third-party components keep their own licences (see the packages/ folder and
+each dependency's licence).

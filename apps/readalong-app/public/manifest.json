@@ -1,0 +1,26 @@
+{
+  "name": "Readalong",
+  "short_name": "Readalong",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "description": "Readalong is an ebook reader that is also an audiobook (based on Readalong, AGPL-3.0).",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon.png",
+      "type": "image/png",
+      "sizes": "256x256"
+    },
+    {
+      "src": "/icon.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "splash_pages": null
+}

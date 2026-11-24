@@ -1,0 +1,14 @@
+{
+  "app_name": {
+    "message": "ارسال به Readalong",
+    "description": "Extension name shown in the browser toolbar and the Chrome Web Store listing."
+  },
+  "app_description": {
+    "message": "صفحات وب را در کتابخانه Readalong خود ذخیره کنید",
+    "description": "Short description shown in the Chrome Web Store listing."
+  },
+  "action_title": {
+    "message": "ارسال به Readalong",
+    "description": "Tooltip on the toolbar action button."
+  }
+}
