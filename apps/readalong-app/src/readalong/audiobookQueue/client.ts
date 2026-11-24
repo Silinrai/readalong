@@ -168,7 +168,13 @@ export class QueueClient {
     ).settings;
   }
 
-  /** The narrated EPUB of a finished job. */
+  /** Where the narrated EPUB can be fetched with a plain GET (for a native
+   *  download straight to disk: these books run to hundreds of MB). */
+  downloadUrl(id: string): string {
+    return `${this.baseUrl}/api/jobs/${id}/download?token=${encodeURIComponent(this.token)}`;
+  }
+
+  /** The narrated EPUB of a finished job, in memory (web build only). */
   async download(id: string): Promise<ArrayBuffer> {
     const response = await this.fetcher(`${this.baseUrl}/api/jobs/${id}/download`, {
       headers: { Authorization: `Bearer ${this.token}` },

@@ -4,7 +4,10 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useEnv } from '@/context/EnvContext';
 import { useSettingsStore } from '@/store/settingsStore';
 import { saveSysSettings } from '@/helpers/settings';
+import { isWebAppPlatform } from '@/services/environment';
+import { tauriDownload } from '@/utils/transfer';
 import type { SelectedFile } from '@/hooks/useFileSelector';
+import { fetchQueueBook } from './fetchBook';
 import { QueueClient, normalizeQueueUrl } from './client';
 import { jobsToImport, useAudiobookQueueStore } from './queueStore';
 
@@ -29,7 +32,7 @@ const IMPORT_EVERY_MS = 2 * 60 * 1000;
  *  queue list doesn't touch the book. */
 export const useAudiobookAutoImport = (libraryLoaded: boolean, importBooks: ImportBooks) => {
   const client = useQueueClient();
-  const { envConfig } = useEnv();
+  const { envConfig, appService } = useEnv();
   const importRef = useRef(importBooks);
   importRef.current = importBooks;
   const running = useRef(false);
@@ -46,20 +49,27 @@ export const useAudiobookAutoImport = (libraryLoaded: boolean, importBooks: Impo
         if (!status) return;
         const imported = { ...(useSettingsStore.getState().settings.audiobookQueueImported ?? {}) };
         for (const job of jobsToImport(status.jobs, imported)) {
-          const data = await client.download(job.id);
-          const name = `${job.title.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'Audiobook'} (narrated).epub`;
-          const result = await importRef.current(
-            [{ file: new File([data], name, { type: 'application/epub+zip' }) }],
-            undefined,
-            { silent: true },
+          const { selected, tempPath } = await fetchQueueBook(
+            client,
+            job,
+            isWebAppPlatform() ? null : appService,
+            tauriDownload,
           );
-          if (result.importedCount > 0 || result.failedPaths.length === 0) {
-            imported[job.id] = job.checksum;
-            await saveSysSettings(envConfig, 'audiobookQueueImported', imported);
+          try {
+            const result = await importRef.current([selected], undefined, { silent: true });
+            if (result.importedCount > 0 || result.failedPaths.length === 0) {
+              imported[job.id] = job.checksum;
+              await saveSysSettings(envConfig, 'audiobookQueueImported', imported);
+            } else {
+              console.warn('[readalong-queue] import failed', job.title, result.failedPaths);
+            }
+          } finally {
+            if (tempPath) await appService?.deleteFile(tempPath, 'Cache').catch(() => {});
           }
         }
-      } catch {
+      } catch (e) {
         // The PC is off or away: try again next time.
+        console.warn('[readalong-queue] auto-import', e);
       } finally {
         running.current = false;
       }
@@ -70,5 +80,5 @@ export const useAudiobookAutoImport = (libraryLoaded: boolean, importBooks: Impo
       stopped = true;
       clearInterval(timer);
     };
-  }, [client, libraryLoaded, envConfig]);
+  }, [client, libraryLoaded, envConfig, appService]);
 };
