@@ -3,6 +3,16 @@ import { bookDataStoreHooks } from '@/__tests__/helpers/book-data-store-mock';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// These tests cover the upstream features Readalong hides from its screens
+// (readalong/features.ts); run them with those features shown.
+vi.mock('@/readalong/features', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/readalong/features')>()),
+  SHOW_TRANSLATION: true,
+  SHOW_WEB_IMPORTS: true,
+  SHOW_INTEGRATIONS: true,
+  SHOW_DESKTOP_CONTROLS: true,
+}));
+
 /**
  * #5910: the reader's sync row was Readalong-Cloud-only. A user syncing through
  * WebDAV / iCloud / Drive / S3 alone was told "Never synced" (or, with no

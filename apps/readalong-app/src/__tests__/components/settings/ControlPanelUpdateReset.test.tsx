@@ -7,6 +7,22 @@ import { getDefaultViewSettings } from '@/services/settingsService';
 import { useSettingsStore } from '@/store/settingsStore';
 import ControlPanel from '@/components/settings/ControlPanel';
 
+// These tests cover the upstream features Readalong hides from its screens
+// (readalong/features.ts); run them with those features shown.
+vi.mock('@/readalong/features', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/readalong/features')>()),
+  SHOW_TRANSLATION: true,
+  SHOW_WEB_IMPORTS: true,
+  SHOW_INTEGRATIONS: true,
+  SHOW_DESKTOP_CONTROLS: true,
+}));
+
+// The upstream services this covers are off in Readalong (readalong/upstream.ts).
+vi.mock('@/readalong/upstream', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/readalong/upstream')>()),
+  UPSTREAM_UPDATES: true,
+}));
+
 const storageKey = 'control-panel-update-reset';
 const defaultViewSettings = getDefaultViewSettings({
   fs: {} as FileSystem,

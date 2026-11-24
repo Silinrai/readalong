@@ -30,6 +30,22 @@ vi.mock('@/hooks/useQuotaStats', () => ({ useQuotaStats: () => quota }));
 import ReceiveRequestDialog from '@/components/localsend/ReceiveRequestDialog';
 import en from '../../../../public/locales/en/translation.json';
 
+// These tests cover the upstream features Readalong hides from its screens
+// (readalong/features.ts); run them with those features shown.
+vi.mock('@/readalong/features', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/readalong/features')>()),
+  SHOW_TRANSLATION: true,
+  SHOW_WEB_IMPORTS: true,
+  SHOW_INTEGRATIONS: true,
+  SHOW_DESKTOP_CONTROLS: true,
+}));
+
+// The upstream services this covers are off in Readalong (readalong/upstream.ts).
+vi.mock('@/readalong/upstream', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/readalong/upstream')>()),
+  UPSTREAM_ONLINE: true,
+}));
+
 const request = {
   sessionId: 's1',
   sender: {

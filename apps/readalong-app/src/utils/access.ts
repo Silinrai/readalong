@@ -9,6 +9,7 @@ import {
 import { isWebAppPlatform } from '@/services/environment';
 import { getDailyUsage } from '@/services/translators/dailyUsage';
 import { getRuntimeConfig } from '@/services/runtimeConfig';
+import { UPSTREAM_ONLINE } from '@/readalong/upstream';
 
 interface Token {
   plan: UserPlan;
@@ -194,9 +195,11 @@ export const isSelfHosted = (): boolean =>
 /**
  * The single gate for premium features: a self-hosted deployment, a paid
  * subscription, or the Full Customization unlock bought outright.
+ * Readalong: there is no upstream account or store to buy a plan from, so
+ * with the upstream services off every one of these features is simply on.
  */
 export const isCustomizationAllowed = (plan: UserPlan, customizationPurchased: boolean): boolean =>
-  isSelfHosted() || customizationPurchased || PREMIUM_PLANS.includes(plan);
+  !UPSTREAM_ONLINE || isSelfHosted() || customizationPurchased || PREMIUM_PLANS.includes(plan);
 
 /**
  * Custom translators (the user's own OpenAI-compatible LLM or DeepL key) are a
@@ -207,7 +210,7 @@ export const isCustomizationAllowed = (plan: UserPlan, customizationPurchased: b
 export const isCustomTranslatorAllowed = (token: string | null | undefined): boolean =>
   token
     ? isCustomizationAllowed(getUserProfilePlan(token), getCustomizationPurchased(token))
-    : isSelfHosted();
+    : !UPSTREAM_ONLINE || isSelfHosted();
 
 /**
  * Custom TTS services (the user's own OpenAI-compatible speech endpoint) are

@@ -6,6 +6,7 @@ import { useEnv } from '@/context/EnvContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import MenuItem from '@/components/MenuItem';
 import Menu from '@/components/Menu';
+import { SHOW_WEB_IMPORTS } from '@/readalong/features';
 
 export interface ImportMenuProps {
   menuClassName?: string;
@@ -88,38 +89,44 @@ const ImportMenu: React.FC<ImportMenuProps> = ({
           onClick={handleImportFromDirectory}
         />
       )}
-      {onImportPastedText && (
+      {SHOW_WEB_IMPORTS && onImportPastedText && (
         <MenuItem
           label={_('From Pasted Text')}
           Icon={<MdContentPaste className='h-5 w-5' />}
           onClick={handleImportPastedText}
         />
       )}
-      <hr aria-hidden='true' className='border-base-200 my-1' />
-      {onImportFromWebBrowser && (
-        <MenuItem
-          label={_('From Web Browser')}
-          Icon={<MdLanguage className='h-5 w-5' />}
-          onClick={handleImportFromWebBrowser}
-        />
+      {SHOW_WEB_IMPORTS && (
+        <>
+          <hr aria-hidden='true' className='border-base-200 my-1' />
+          {onImportFromWebBrowser && (
+            <MenuItem
+              label={_('From Web Browser')}
+              Icon={<MdLanguage className='h-5 w-5' />}
+              onClick={handleImportFromWebBrowser}
+            />
+          )}
+          {onImportBookFromNovelUrl && (
+            <MenuItem
+              label={_('From Web Novel')}
+              Icon={<MdMenuBook className='h-5 w-5' />}
+              onClick={handleImportFromNovelUrl}
+            />
+          )}
+          <MenuItem
+            label={_('From Feed URL')}
+            Icon={<MdRssFeed className='h-5 w-5' />}
+            onClick={handleOpenFeeds}
+          />
+          <MenuItem
+            label={
+              appService?.isOnlineCatalogsAccessible ? _('Online Library') : _('OPDS Catalogs')
+            }
+            Icon={<LuLibrary className='h-5 w-5' />}
+            onClick={handleOpenCatalogManager}
+          />
+        </>
       )}
-      {onImportBookFromNovelUrl && (
-        <MenuItem
-          label={_('From Web Novel')}
-          Icon={<MdMenuBook className='h-5 w-5' />}
-          onClick={handleImportFromNovelUrl}
-        />
-      )}
-      <MenuItem
-        label={_('From Feed URL')}
-        Icon={<MdRssFeed className='h-5 w-5' />}
-        onClick={handleOpenFeeds}
-      />
-      <MenuItem
-        label={appService?.isOnlineCatalogsAccessible ? _('Online Library') : _('OPDS Catalogs')}
-        Icon={<LuLibrary className='h-5 w-5' />}
-        onClick={handleOpenCatalogManager}
-      />
     </Menu>
   );
 };

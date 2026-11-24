@@ -29,6 +29,7 @@ import {
   revealPageWipe,
   supportsPageWipeReveal,
 } from '../utils/pageWipe';
+import { pacerToPause } from '@/readalong/narrationPacing';
 
 // A stalled forward tick must persist this long before the session reacts
 // (section hop, or stop at the end of the book) — brief stalls can happen
@@ -105,6 +106,19 @@ export const useAutoScroll = (
   // explicit stop takes — but it must leave the resume flag alone, since a
   // session that was still running at close is exactly what reopening resumes.
   const closingRef = useRef(false);
+
+  // Readalong: narration and Auto Scroll take turns (readalong/narrationPacing).
+  const narrationPlayingRef = useRef(false);
+  const pauseNarration = () => {
+    const state = {
+      narrationPlaying: narrationPlayingRef.current,
+      autoScrollRunning: false,
+    };
+    if (pacerToPause('autoscroll', state) === 'narration') {
+      narrationPlayingRef.current = false;
+      eventDispatcher.dispatch('tts-toggle-play', { bookKey });
+    }
+  };
 
   const scrollerRef = useRef<PacedScroller | null>(null);
   if (!scrollerRef.current) {
@@ -259,6 +273,7 @@ export const useAutoScroll = (
     const scroller = scrollerRef.current!;
     if (!scroller.active) return;
     if (scroller.paused) {
+      pauseNarration();
       scroller.resume();
     } else {
       scroller.pause();
@@ -298,6 +313,7 @@ export const useAutoScroll = (
     const speedNow = getViewSettings(bookKey)?.autoScrollSpeed ?? 100;
     setSpeedState(speedNow);
     stallStartRef.current = null;
+    pauseNarration();
     scroller.start((AUTO_SCROLL_BASE_PX_PER_SEC * speedNow) / 100);
     setActive(true);
     setPaused(false);
@@ -422,10 +438,29 @@ export const useAutoScroll = (
       togglePause();
       return true;
     };
+    // Narration starting pauses a running session (readalong/narrationPacing).
+    const onPlaybackState = (event: CustomEvent) => {
+      const detail = event.detail as { bookKey?: string; state?: string } | undefined;
+      if (detail?.bookKey !== bookKey) return;
+      narrationPlayingRef.current = detail.state === 'playing';
+      const state = {
+        narrationPlaying: narrationPlayingRef.current,
+        autoScrollRunning: scroller.active && !scroller.paused,
+      };
+      if (narrationPlayingRef.current && pacerToPause('narration', state) === 'autoscroll') {
+        togglePause();
+        eventDispatcher.dispatch('toast', {
+          message: _('Auto Scroll paused while narration plays'),
+          type: 'info',
+        });
+      }
+    };
+    eventDispatcher.on('tts-playback-state', onPlaybackState);
     eventDispatcher.on('autoscroll-toggle', onToggle);
     eventDispatcher.onSync('iframe-single-click', onSingleClick);
     window.addEventListener('message', onMessage);
     return () => {
+      eventDispatcher.off('tts-playback-state', onPlaybackState);
       eventDispatcher.off('autoscroll-toggle', onToggle);
       eventDispatcher.offSync('iframe-single-click', onSingleClick);
       window.removeEventListener('message', onMessage);

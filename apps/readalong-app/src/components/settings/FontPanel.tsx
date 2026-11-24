@@ -38,6 +38,7 @@ import {
 import NumberInput from './NumberInput';
 import FontDropdown from './FontDropDown';
 import CustomFonts from './CustomFonts';
+import { SHOW_TRANSLATION } from '@/readalong/features';
 import { Toggle } from '../primitives/toggle';
 
 const genCJKFontsList = (sysFonts: string[]) => {
@@ -453,7 +454,7 @@ const FontPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset 
         </div>
       </BoxedList>
 
-      {(isCJKEnv() || view?.language.isCJK) && (
+      {SHOW_TRANSLATION && (isCJKEnv() || view?.language.isCJK) && (
         <BoxedList title={_('CJK Font')}>
           <FontFace
             family='serif'

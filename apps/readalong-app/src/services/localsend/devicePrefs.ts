@@ -2,6 +2,7 @@
 // across devices): each device opts into being a LocalSend peer on its own.
 
 import { stubTranslation as _ } from '@/utils/misc';
+import { SHOW_INTEGRATIONS } from '@/readalong/features';
 
 const ENABLED_KEY = 'readalong-localsend-enabled';
 const ALIAS_KEY = 'readalong-localsend-alias';
@@ -23,6 +24,9 @@ export const DEFAULT_ALIAS_NAMED_KEY = _("{{name}}'s Readalong");
  * Settings stops the service.
  */
 export function isLocalSendEnabled(): boolean {
+  // Readalong: Nearby BookDrop is one of the hidden third-party services
+  // (readalong/features.ts), so the phone doesn't announce itself on the LAN.
+  if (!SHOW_INTEGRATIONS) return false;
   try {
     return localStorage.getItem(ENABLED_KEY) !== 'false';
   } catch {

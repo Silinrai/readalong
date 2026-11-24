@@ -1,7 +1,23 @@
 // @vitest-environment node
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import { TTS_CACHE_REQUIRES_PREMIUM, isTTSCacheAllowed, isTTSCacheInPlan } from '@/utils/access';
+
+// These tests cover upstream features and paid-plan gates that Readalong
+// hides or opens up (readalong/features.ts, readalong/upstream.ts); run them
+// the upstream way.
+vi.mock('@/readalong/features', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/readalong/features')>()),
+  SHOW_TRANSLATION: true,
+  SHOW_WEB_IMPORTS: true,
+  SHOW_INTEGRATIONS: true,
+  SHOW_DESKTOP_CONTROLS: true,
+}));
+vi.mock('@/readalong/upstream', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/readalong/upstream')>()),
+  UPSTREAM_ONLINE: true,
+  UPSTREAM_TELEMETRY: true,
+}));
 
 describe('isTTSCacheInPlan', () => {
   test('any paid plan can use the offline TTS audio cache', () => {

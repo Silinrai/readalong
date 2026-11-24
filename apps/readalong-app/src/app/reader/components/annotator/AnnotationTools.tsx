@@ -11,6 +11,7 @@ import { BsTranslate } from 'react-icons/bs';
 import { FaHeadphones } from 'react-icons/fa6';
 import { IoIosBuild } from 'react-icons/io';
 import { AnnotationToolType } from '@/types/annotator';
+import { SHOW_TRANSLATION } from '@/readalong/features';
 import { stubTranslation as _ } from '@/utils/misc';
 
 type AnnotationToolButton = {
@@ -132,5 +133,5 @@ export const annotationToolButtons = createAnnotationToolButtons([
 ]);
 
 export const annotationToolQuickActions = annotationToolButtons.filter(
-  (button) => button.quickAction,
+  (button) => button.quickAction && (SHOW_TRANSLATION || button.type !== 'translate'),
 );

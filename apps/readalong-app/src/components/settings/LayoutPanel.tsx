@@ -28,6 +28,7 @@ import {
 } from './primitives';
 import NumberInput from './NumberInput';
 import ColorInput from './theme/ColorInput';
+import { SHOW_TRANSLATION } from '@/readalong/features';
 import { Toggle } from '../primitives/toggle';
 
 const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset }) => {
@@ -555,7 +556,7 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
         <SettingLabel>{_('Override Book Layout')}</SettingLabel>
         <Toggle checked={overrideLayout} onChange={() => setOverrideLayout(!overrideLayout)} />
       </div>
-      {mightBeRTLBook && (
+      {SHOW_TRANSLATION && mightBeRTLBook && (
         <div
           data-setting-id='settings.layout.writingMode'
           className='flex items-center justify-between px-4'

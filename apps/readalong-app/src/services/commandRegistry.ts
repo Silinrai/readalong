@@ -10,6 +10,7 @@ import { TbSunMoon } from 'react-icons/tb';
 import { MdRefresh } from 'react-icons/md';
 import { IconType } from 'react-icons';
 import { stubTranslation as _ } from '@/utils/misc';
+import { isHiddenSetting } from '@/readalong/features';
 
 export type CommandCategory = 'settings' | 'actions' | 'navigation';
 
@@ -963,7 +964,8 @@ export const buildCommandRegistry = (options: CommandRegistryOptions): CommandIt
     }),
   );
 
-  return items;
+  // Readalong: leave out what its screens hide (readalong/features.ts).
+  return items.filter((item) => !isHiddenSetting(item.id));
 };
 
 // category labels for display

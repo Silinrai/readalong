@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
 import { annotationToolButtons } from '@/app/reader/components/annotator/AnnotationTools';
 import {
   ALL_ANNOTATION_TOOL_TYPES,
@@ -12,6 +12,16 @@ import {
   shouldShowHighlightOptions,
   supportsProofread,
 } from '@/utils/annotationToolbar';
+
+// These tests cover the upstream features Readalong hides from its screens
+// (readalong/features.ts); run them with those features shown.
+vi.mock('@/readalong/features', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/readalong/features')>()),
+  SHOW_TRANSLATION: true,
+  SHOW_WEB_IMPORTS: true,
+  SHOW_INTEGRATIONS: true,
+  SHOW_DESKTOP_CONTROLS: true,
+}));
 
 describe('annotationToolbar helpers', () => {
   test('ALL_ANNOTATION_TOOL_TYPES matches the button registry order', () => {

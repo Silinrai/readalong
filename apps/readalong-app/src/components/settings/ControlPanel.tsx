@@ -1,4 +1,5 @@
-import { UPSTREAM_TELEMETRY } from '@/readalong/upstream';
+import { UPSTREAM_TELEMETRY, UPSTREAM_UPDATES } from '@/readalong/upstream';
+import { SHOW_DESKTOP_CONTROLS } from '@/readalong/features';
 import React, { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useEnv } from '@/context/EnvContext';
@@ -649,13 +650,15 @@ const ControlPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRes
         }}
       />
 
-      <BoxedList title={_('Shortcuts')} data-setting-id='settings.control.keyboardShortcuts'>
-        <NavigationRow
-          title={_('Keyboard Shortcuts')}
-          status={_('Customize keyboard and mouse controls')}
-          onClick={() => setShowKeyboardShortcuts(true)}
-        />
-      </BoxedList>
+      {(SHOW_DESKTOP_CONTROLS || !appService?.isMobile) && (
+        <BoxedList title={_('Shortcuts')} data-setting-id='settings.control.keyboardShortcuts'>
+          <NavigationRow
+            title={_('Keyboard Shortcuts')}
+            status={_('Customize keyboard and mouse controls')}
+            onClick={() => setShowKeyboardShortcuts(true)}
+          />
+        </BoxedList>
+      )}
 
       <BoxedList
         title={_('Annotation Tools')}
@@ -726,43 +729,48 @@ const ControlPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRes
       </BoxedList>
 
       <BoxedList title={_('Device')} data-setting-id='settings.control.device'>
-        <SettingsSwitchRow
-          label={_('E-Ink Mode')}
-          checked={isEink}
-          onChange={() => setIsEink(!isEink)}
-          data-setting-id='settings.control.einkMode'
-        />
-        {appService?.isAndroidApp && einkRefreshSupported && (
-          <SettingsRow
-            label={_('Auto Full Refresh')}
-            disabled={!isEink}
-            data-setting-id='settings.control.autoFullRefresh'
-          >
-            <SettingsSelect
-              value={String(einkAutoRefreshInterval)}
-              onChange={(e) => setEinkAutoRefreshInterval(Number(e.target.value))}
-              ariaLabel={_('Auto Full Refresh')}
-              disabled={!isEink}
-              options={einkAutoRefreshIntervalChoices}
+        {/* Readalong: no e-ink screens (readalong/features.ts). */}
+        {SHOW_DESKTOP_CONTROLS && (
+          <>
+            <SettingsSwitchRow
+              label={_('E-Ink Mode')}
+              checked={isEink}
+              onChange={() => setIsEink(!isEink)}
+              data-setting-id='settings.control.einkMode'
             />
-          </SettingsRow>
+            {appService?.isAndroidApp && einkRefreshSupported && (
+              <SettingsRow
+                label={_('Auto Full Refresh')}
+                disabled={!isEink}
+                data-setting-id='settings.control.autoFullRefresh'
+              >
+                <SettingsSelect
+                  value={String(einkAutoRefreshInterval)}
+                  onChange={(e) => setEinkAutoRefreshInterval(Number(e.target.value))}
+                  ariaLabel={_('Auto Full Refresh')}
+                  disabled={!isEink}
+                  options={einkAutoRefreshIntervalChoices}
+                />
+              </SettingsRow>
+            )}
+            <SettingsSwitchRow
+              label={_('Color E-Ink Mode')}
+              checked={isColorEink}
+              disabled={!isEink}
+              onChange={() => setIsColorEink(!isColorEink)}
+              data-setting-id='settings.control.colorEinkMode'
+            />
+            <SettingsSwitchRow
+              label={_('Hide Bookshelf Buttons')}
+              description={_('Previous and Next in the library')}
+              checked={hideBookshelfPageButtons}
+              // The library follows the global E-Ink setting, not this book's.
+              disabled={!settings.globalViewSettings?.isEink}
+              onChange={() => setHideBookshelfPageButtons(!hideBookshelfPageButtons)}
+              data-setting-id='settings.control.hideBookshelfPageButtons'
+            />
+          </>
         )}
-        <SettingsSwitchRow
-          label={_('Color E-Ink Mode')}
-          checked={isColorEink}
-          disabled={!isEink}
-          onChange={() => setIsColorEink(!isColorEink)}
-          data-setting-id='settings.control.colorEinkMode'
-        />
-        <SettingsSwitchRow
-          label={_('Hide Bookshelf Buttons')}
-          description={_('Previous and Next in the library')}
-          checked={hideBookshelfPageButtons}
-          // The library follows the global E-Ink setting, not this book's.
-          disabled={!settings.globalViewSettings?.isEink}
-          onChange={() => setHideBookshelfPageButtons(!hideBookshelfPageButtons)}
-          data-setting-id='settings.control.hideBookshelfPageButtons'
-        />
         {appService?.isMobileApp && (
           <SettingsSwitchRow
             label={_('Always Show Status Bar')}
@@ -803,20 +811,24 @@ const ControlPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRes
             data-setting-id='settings.control.autohideCursor'
           />
         )}
-        <SettingsSwitchRow
-          label={_('Reverse Mouse Wheel')}
-          description={_('Scroll up for the next page')}
-          checked={reverseWheelPaging}
-          onChange={() => setReverseWheelPaging(!reverseWheelPaging)}
-          data-setting-id='settings.control.reverseWheelPaging'
-        />
-        <SettingsSwitchRow
-          label={_('Gamepad Support')}
-          description={_('Navigate with a connected controller')}
-          checked={gamepadEnabled}
-          onChange={() => setGamepadEnabled(!gamepadEnabled)}
-          data-setting-id='settings.control.gamepadEnabled'
-        />
+        {(SHOW_DESKTOP_CONTROLS || !appService?.isMobile) && (
+          <>
+            <SettingsSwitchRow
+              label={_('Reverse Mouse Wheel')}
+              description={_('Scroll up for the next page')}
+              checked={reverseWheelPaging}
+              onChange={() => setReverseWheelPaging(!reverseWheelPaging)}
+              data-setting-id='settings.control.reverseWheelPaging'
+            />
+            <SettingsSwitchRow
+              label={_('Gamepad Support')}
+              description={_('Navigate with a connected controller')}
+              checked={gamepadEnabled}
+              onChange={() => setGamepadEnabled(!gamepadEnabled)}
+              data-setting-id='settings.control.gamepadEnabled'
+            />
+          </>
+        )}
       </BoxedList>
 
       {appService?.isWindowsApp && (
@@ -839,7 +851,7 @@ const ControlPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRes
         </div>
       )}
 
-      {appService?.hasUpdater && (
+      {UPSTREAM_UPDATES && appService?.hasUpdater && (
         <BoxedList title={_('Update')} data-setting-id='settings.control.checkUpdates'>
           <SettingsSwitchRow
             label={_('Check Updates on Start')}

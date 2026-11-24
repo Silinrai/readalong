@@ -13,6 +13,22 @@ import type { VocabularyEntry } from '@/services/vocabulary/types';
 import type { Book } from '@/types/book';
 import { eventDispatcher } from '@/utils/event';
 
+// These tests cover upstream features and paid-plan gates that Readalong
+// hides or opens up (readalong/features.ts, readalong/upstream.ts); run them
+// the upstream way.
+vi.mock('@/readalong/features', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/readalong/features')>()),
+  SHOW_TRANSLATION: true,
+  SHOW_WEB_IMPORTS: true,
+  SHOW_INTEGRATIONS: true,
+  SHOW_DESKTOP_CONTROLS: true,
+}));
+vi.mock('@/readalong/upstream', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/readalong/upstream')>()),
+  UPSTREAM_ONLINE: true,
+  UPSTREAM_TELEMETRY: true,
+}));
+
 const FIELDS = ['Front', 'Back', 'Word', 'Language', 'Entry'];
 const saveFile = vi.fn(async () => true);
 const push = vi.fn();

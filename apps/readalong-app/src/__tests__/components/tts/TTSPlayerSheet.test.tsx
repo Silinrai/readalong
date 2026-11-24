@@ -120,6 +120,22 @@ vi.mock('@/app/reader/components/tts/TTSChaptersView', () => ({
 import TTSPlayerSheet from '@/app/reader/components/tts/TTSPlayerSheet';
 import { TTSUtils } from '@/services/tts/TTSUtils';
 
+// These tests cover the upstream features Readalong hides from its screens
+// (readalong/features.ts); run them with those features shown.
+vi.mock('@/readalong/features', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/readalong/features')>()),
+  SHOW_TRANSLATION: true,
+  SHOW_WEB_IMPORTS: true,
+  SHOW_INTEGRATIONS: true,
+  SHOW_DESKTOP_CONTROLS: true,
+}));
+
+// The upstream services this covers are off in Readalong (readalong/upstream.ts).
+vi.mock('@/readalong/upstream', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/readalong/upstream')>()),
+  UPSTREAM_ONLINE: true,
+}));
+
 const waitFor = <T,>(callback: () => T | Promise<T>) =>
   waitForWithOptions(callback, { interval: 1 });
 

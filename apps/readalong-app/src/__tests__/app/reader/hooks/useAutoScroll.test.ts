@@ -631,3 +631,79 @@ describe('useAutoScroll in paginated mode', () => {
     });
   });
 });
+
+// Readalong: narration and Auto Scroll both pace the page, so they take turns
+// (readalong/narrationPacing.ts): whichever starts last wins, the other pauses.
+describe('useAutoScroll with narration', () => {
+  const narration = async (state: 'playing' | 'paused' | 'stopped') => {
+    await act(async () => {
+      await eventDispatcher.dispatch('tts-playback-state', { bookKey: BOOK_KEY, state });
+    });
+  };
+  const narrationToggles = (spy: { mock: { calls: unknown[][] } }) =>
+    spy.mock.calls.filter((call) => call[0] === 'tts-toggle-play');
+
+  test('pauses a running session when narration starts', async () => {
+    h.inited = true;
+    const { result } = setup();
+    await toggle();
+    expect(result.current.paused).toBe(false);
+
+    await narration('playing');
+
+    expect(result.current.active).toBe(true);
+    expect(result.current.paused).toBe(true);
+  });
+
+  test('pauses narration when a session starts while it plays', async () => {
+    h.inited = true;
+    const spy = vi.spyOn(eventDispatcher, 'dispatch');
+    setup();
+    await narration('playing');
+
+    await toggle();
+
+    expect(narrationToggles(spy)).toEqual([['tts-toggle-play', { bookKey: BOOK_KEY }]]);
+    spy.mockRestore();
+  });
+
+  test('pauses narration when the reader resumes the session', async () => {
+    h.inited = true;
+    const spy = vi.spyOn(eventDispatcher, 'dispatch');
+    const { result } = setup();
+    await toggle();
+    await narration('playing');
+    expect(result.current.paused).toBe(true);
+    spy.mockClear();
+
+    act(() => result.current.togglePause());
+
+    expect(result.current.paused).toBe(false);
+    expect(narrationToggles(spy)).toHaveLength(1);
+    spy.mockRestore();
+  });
+
+  test('leaves paused or stopped narration alone', async () => {
+    h.inited = true;
+    const spy = vi.spyOn(eventDispatcher, 'dispatch');
+    setup();
+    await narration('paused');
+
+    await toggle();
+
+    expect(narrationToggles(spy)).toHaveLength(0);
+    spy.mockRestore();
+  });
+
+  test('ignores another book’s narration', async () => {
+    h.inited = true;
+    const { result } = setup();
+    await toggle();
+
+    await act(async () => {
+      await eventDispatcher.dispatch('tts-playback-state', { bookKey: 'other', state: 'playing' });
+    });
+
+    expect(result.current.paused).toBe(false);
+  });
+});

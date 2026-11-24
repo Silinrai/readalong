@@ -1,5 +1,6 @@
 import type { AnnotationToolType } from '@/types/annotator';
 import { BookFormat, FIXED_LAYOUT_FORMATS } from '@/types/book';
+import { SHOW_TRANSLATION } from '@/readalong/features';
 
 // Proofread rewrites the rendered text through the content transformers, which
 // every reflowable format runs (Markdown wires the same pipeline in utils/md.ts
@@ -64,8 +65,11 @@ const sanitize = (items: AnnotationToolType[] | undefined): AnnotationToolType[]
 
 // Share needs a share sheet, and the system dictionary tool the macOS, iOS or
 // Android handoff: elsewhere neither is offered.
+// Readalong hides translation (see readalong/features.ts).
 const isOffered = (type: AnnotationToolType, canShare: boolean, canLookUpSystem: boolean) =>
-  (canShare || type !== 'share') && (canLookUpSystem || type !== 'systemdictionary');
+  (canShare || type !== 'share') &&
+  (canLookUpSystem || type !== 'systemdictionary') &&
+  (SHOW_TRANSLATION || type !== 'translate');
 
 // Visible tools to render in the live selection toolbar, in order.
 export const getToolbarToolTypes = (

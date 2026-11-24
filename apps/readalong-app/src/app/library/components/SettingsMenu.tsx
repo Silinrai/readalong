@@ -1,4 +1,5 @@
 import { UPSTREAM_ONLINE } from '@/readalong/upstream';
+import { SHOW_INTEGRATIONS } from '@/readalong/features';
 import clsx from 'clsx';
 import React, { useEffect, useState } from 'react';
 import {
@@ -372,21 +373,23 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onPullLibrary, setIsDropdow
         <MenuItem label={_('Sign In')} Icon={PiUserCircle} onClick={handleUserLogin}></MenuItem>
       ) : null}
 
-      <MenuItem
-        label={_('Cloud File Transfers')}
-        Icon={MdCloudSync}
-        description={
-          hasActiveTransfers
-            ? _('{{activeCount}} active, {{pendingCount}} pending', {
-                activeCount: stats.active,
-                pendingCount: stats.pending,
-              })
-            : stats.failed > 0
-              ? _('{{failedCount}} failed', { failedCount: stats.failed })
-              : ''
-        }
-        onClick={openTransferQueue}
-      />
+      {(UPSTREAM_ONLINE || SHOW_INTEGRATIONS) && (
+        <MenuItem
+          label={_('Cloud File Transfers')}
+          Icon={MdCloudSync}
+          description={
+            hasActiveTransfers
+              ? _('{{activeCount}} active, {{pendingCount}} pending', {
+                  activeCount: stats.active,
+                  pendingCount: stats.pending,
+                })
+              : stats.failed > 0
+                ? _('{{failedCount}} failed', { failedCount: stats.failed })
+                : ''
+          }
+          onClick={openTransferQueue}
+        />
+      )}
       {isTauriAppPlatform() && (
         <MenuItem
           label={_('Auto Import on File Open')}

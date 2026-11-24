@@ -98,6 +98,16 @@ vi.mock('@/app/reader/hooks/useCapturedTurn', () => ({
 import ControlPanel from '@/components/settings/ControlPanel';
 import { DEFAULT_SYSTEM_SETTINGS } from '@/services/constants';
 
+// These tests cover the upstream features Readalong hides from its screens
+// (readalong/features.ts); run them with those features shown.
+vi.mock('@/readalong/features', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/readalong/features')>()),
+  SHOW_TRANSLATION: true,
+  SHOW_WEB_IMPORTS: true,
+  SHOW_INTEGRATIONS: true,
+  SHOW_DESKTOP_CONTROLS: true,
+}));
+
 const gamepadSwitch = () =>
   screen
     .getByText('Gamepad Support')

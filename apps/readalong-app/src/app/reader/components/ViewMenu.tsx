@@ -1,4 +1,5 @@
 import { UPSTREAM_ONLINE } from '@/readalong/upstream';
+import { SHOW_DESKTOP_CONTROLS, SHOW_INTEGRATIONS } from '@/readalong/features';
 import clsx from 'clsx';
 import React, { useEffect } from 'react';
 import { useState } from 'react';
@@ -61,6 +62,9 @@ const ViewMenu: React.FC<ViewMenuProps> = ({
   const router = useRouter();
   const { user } = useAuth();
   const { envConfig, appService } = useEnv();
+  // Key hints only where there is a keyboard to press them on.
+  const keyHint = (keys: string) =>
+    SHOW_DESKTOP_CONTROLS || !appService?.isMobile ? keys : undefined;
   const { setSettingsDialogOpen, setSettingsDialogBookKey } = useSettingsStore();
   const { getView, getViewSettings, getViewState, getProgress, setViewSettings, recreateViewer } =
     useReaderStore();
@@ -519,7 +523,7 @@ const ViewMenu: React.FC<ViewMenuProps> = ({
       {!bookData.isFixedLayout && (
         <MenuItem
           label={_('Scrolled Mode')}
-          shortcut='Shift+J'
+          shortcut={keyHint('Shift+J')}
           Icon={isScrolledMode ? MdCheck : undefined}
           onClick={toggleScrolledMode}
         />
@@ -527,7 +531,7 @@ const ViewMenu: React.FC<ViewMenuProps> = ({
 
       <MenuItem
         label={_('Auto Scroll')}
-        shortcut='Shift+A'
+        shortcut={keyHint('Shift+A')}
         Icon={viewState?.autoScrollEnabled ? MdCheck : undefined}
         onClick={toggleAutoScroll}
         // Paginated pages are wiped in along horizontal lines (#7575).
@@ -550,50 +554,58 @@ const ViewMenu: React.FC<ViewMenuProps> = ({
         <>
           <MenuItem
             label={_('Paragraph Mode')}
-            shortcut='Shift+P'
+            shortcut={keyHint('Shift+P')}
             Icon={isParagraphMode ? MdCheck : undefined}
             onClick={toggleParagraphMode}
           />
-          <MenuItem label={_('Speed Reading Mode')} shortcut='Shift+V' onClick={handleStartRSVP} />
+          <MenuItem
+            label={_('Speed Reading Mode')}
+            shortcut={keyHint('Shift+V')}
+            onClick={handleStartRSVP}
+          />
         </>
       )}
 
-      <hr aria-hidden='true' className='border-base-300 my-1' />
+      {(UPSTREAM_ONLINE || SHOW_INTEGRATIONS) && (
+        <>
+          <hr aria-hidden='true' className='border-base-300 my-1' />
 
-      <MenuItem
-        label={syncStatus.label}
-        description={
-          // Which provider the status belongs to. Only worth saying when a
-          // third-party backend is in play — with Readalong Cloud alone the row
-          // means what it always meant.
-          syncStatus.providers.length > 1
-            ? // Several names in full would overrun the row; show a count.
-              // `count` (not a plain var) so i18next applies each locale's
-              // plural rule.
-              _('Synced via {{count}} providers', { count: syncStatus.providers.length })
-            : syncStatus.providers[0] && syncStatus.providers[0].kind !== 'readalong'
-              ? _('Synced via {{provider}}', { provider: syncStatus.providers[0].name })
-              : undefined
-        }
-        Icon={syncStatus.needsSignIn || syncStatus.failed ? MdSyncProblem : MdSync}
-        iconClassName={
-          syncStatus.syncing || (user && viewState?.syncing) ? 'animate-reverse-spin' : ''
-        }
-        onClick={handleSync}
-        siblings={
-          <button
-            aria-label={_('Sync Info')}
-            title={_('Sync Info')}
-            className='hover:bg-base-300 text-base-content/70 mx-1 rounded-md px-2'
-            onClick={() => {
-              setIsDropdownOpen?.(false);
-              onShowMetaHashDialog?.();
-            }}
-          >
-            <MdInfoOutline size={16} />
-          </button>
-        }
-      />
+          <MenuItem
+            label={syncStatus.label}
+            description={
+              // Which provider the status belongs to. Only worth saying when a
+              // third-party backend is in play — with Readalong Cloud alone the row
+              // means what it always meant.
+              syncStatus.providers.length > 1
+                ? // Several names in full would overrun the row; show a count.
+                  // `count` (not a plain var) so i18next applies each locale's
+                  // plural rule.
+                  _('Synced via {{count}} providers', { count: syncStatus.providers.length })
+                : syncStatus.providers[0] && syncStatus.providers[0].kind !== 'readalong'
+                  ? _('Synced via {{provider}}', { provider: syncStatus.providers[0].name })
+                  : undefined
+            }
+            Icon={syncStatus.needsSignIn || syncStatus.failed ? MdSyncProblem : MdSync}
+            iconClassName={
+              syncStatus.syncing || (user && viewState?.syncing) ? 'animate-reverse-spin' : ''
+            }
+            onClick={handleSync}
+            siblings={
+              <button
+                aria-label={_('Sync Info')}
+                title={_('Sync Info')}
+                className='hover:bg-base-300 text-base-content/70 mx-1 rounded-md px-2'
+                onClick={() => {
+                  setIsDropdownOpen?.(false);
+                  onShowMetaHashDialog?.();
+                }}
+              >
+                <MdInfoOutline size={16} />
+              </button>
+            }
+          />
+        </>
+      )}
 
       <hr aria-hidden='true' className='border-base-300 my-1' />
 
