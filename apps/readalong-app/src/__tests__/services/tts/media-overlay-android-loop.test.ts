@@ -80,6 +80,11 @@ const setup = async () => {
 const settle = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Whether `promise` settles within `ms`.
+// Generous: a promise that settles wins the race at once, and a real bug never
+// settles. Under the full suite's load the 50 ms clock poll runs late, and 300 ms
+// was not always enough.
+const SETTLE_MS = 3000;
+
 const settlesWithin = async (promise: Promise<unknown>, ms: number) =>
   Promise.race([promise.then(() => true), settle(ms).then(() => false)]);
 
@@ -141,7 +146,7 @@ describe('MediaOverlayClient A-B repeat on Android', () => {
     // The native player jumped back to A on its own.
     positionMs = 0;
     emit({ type: 'loop', session: 11, index: 0 });
-    expect(await settlesWithin(end, 300)).toBe(true);
+    expect(await settlesWithin(end, SETTLE_MS)).toBe(true);
     expect((await end).value).toMatchObject({ code: 'end' });
   });
 
@@ -152,7 +157,7 @@ describe('MediaOverlayClient A-B repeat on Android', () => {
     const end = utterance.next();
 
     positionMs = 1500; // somewhere in A: the span came round already
-    expect(await settlesWithin(end, 600)).toBe(true);
+    expect(await settlesWithin(end, SETTLE_MS)).toBe(true);
   });
 
   test('restarting at A does not seek while the native player is inside the span', async () => {
@@ -264,7 +269,7 @@ describe('MediaOverlayClient A-B repeat on Android', () => {
     const end = utterance.next();
 
     positionMs = 10000;
-    expect(await settlesWithin(end, 600)).toBe(true);
+    expect(await settlesWithin(end, SETTLE_MS)).toBe(true);
   });
 
   test('leaves B to the clock when playback pauses after every sentence', async () => {
@@ -277,7 +282,7 @@ describe('MediaOverlayClient A-B repeat on Android', () => {
 
     expect(controlCalls.filter((call) => call['action'] === 'set-loop')).toHaveLength(0);
     positionMs = 9000;
-    expect(await settlesWithin(end, 300)).toBe(true);
+    expect(await settlesWithin(end, SETTLE_MS)).toBe(true);
   });
 
   test('clears the native loop when the span leaves the file', async () => {
