@@ -19,15 +19,17 @@ vi.mock('@/context/EnvContext', () => ({
 }));
 vi.mock('@/hooks/useTranslation', () => ({ useTranslation: () => (s: string) => s }));
 vi.mock('@/hooks/useResetSettings', () => ({ useResetViewSettings: () => resetToDefaults }));
-vi.mock('@/store/readerStore', () => ({
-  useReaderStore: () => ({
+vi.mock('@/store/readerStore', () => {
+  const state = () => ({
     getView: () => null,
     getViewSettings: () => viewSettings,
     getGridInsets: () => null,
     setViewSettings: vi.fn(),
     recreateViewer: vi.fn(),
-  }),
-}));
+  });
+  // The relayout queue reads the store outside React (getState).
+  return { useReaderStore: Object.assign(state, { getState: state }) };
+});
 vi.mock('@/store/bookDataStore', () => ({ useBookDataStore: () => ({ getBookData: () => null }) }));
 vi.mock('@/store/settingsStore', () => ({
   useSettingsStore: () => ({ settings: { globalViewSettings: viewSettings } }),
