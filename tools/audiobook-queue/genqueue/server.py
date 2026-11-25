@@ -252,7 +252,12 @@ def make_handler(api: Api, token: str):
             if method == "GET" and parts == ["api", "status"]:
                 return self._send(200, api.status())
             if method == "GET" and parts == ["api", "profiles"]:
-                return self._send(200, {"profiles": api.backend.profiles() if api.backend else []})
+                try:
+                    return self._send(200, {"profiles": api.backend.profiles() if api.backend else []})
+                except OSError as e:  # requests' ConnectionError/Timeout are OSErrors
+                    return self._send(503, {"error": "VoiceStudio isn't running on the PC. Books can "
+                                                     "still be queued with the default voice.",
+                                            "detail": str(e)[:200]})
             if method == "GET" and parts[:2] == ["api", "profiles"] and len(parts) == 4 and parts[3] == "audio":
                 data, ctype = api.backend.profile_audio(parts[2])
                 self.send_response(200)
@@ -265,6 +270,10 @@ def make_handler(api: Api, token: str):
                 sha = (query.get("sha256") or [""])[0]
                 profile = (query.get("profile") or [""])[0]
                 job = api.store.find_by_checksum(sha, profile) if sha else None
+                # A job removed from the list comes back when the book is sent
+                # again, so the phone can import its audiobook.
+                if job and job.hidden:
+                    job = api.store.update(job.id, hidden=False)
                 return self._send(200, {"job": job_view(job, None, None) if job else None})
             if method == "POST" and parts == ["api", "jobs"]:
                 h = self.headers

@@ -18,6 +18,7 @@ import {
   TOUCH_SWIPE_THRESHOLD_PX,
   TouchDetail,
 } from './useTouchInterceptor';
+import { startsOnSystemGestureEdge } from '@/readalong/gestureEdge';
 import { hasVerticalPanning } from './usePagination';
 
 export const useMouseEvent = (
@@ -541,8 +542,9 @@ export const useTouchEvent = (bookKey: string) => {
       }
     }
 
-    // Gesture was not consumed — handle hover bar toggle
-    if (touchEnd && touchStart) {
+    // Gesture was not consumed — handle hover bar toggle. A swipe that starts
+    // on the system's bottom gesture strip is Android's (going home).
+    if (touchEnd && touchStart && !startsOnSystemGestureEdge(touchStart.screenY)) {
       const windowWidth = window.innerWidth;
       const deltaY = touchEnd.screenY - touchStart.screenY;
       const deltaX = touchEnd.screenX - touchStart.screenX;

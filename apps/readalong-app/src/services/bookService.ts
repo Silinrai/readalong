@@ -46,6 +46,7 @@ import { svg2png } from '@/utils/svg';
 import { normalizeMetadataIsbn } from '@/utils/isbn';
 import { BookFileNotFoundError } from './errors';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { moveBookStats } from '@/readalong/stats/rekeyStats';
 import {
   isBookFileContentSource,
   resolveBookContentSource,
@@ -1071,6 +1072,12 @@ export async function importBook(
       if (lookupIndex) {
         lookupIndex.byHash.set(retiredTombstone.hash, retiredTombstone);
       }
+      // Readalong: the statistics follow the book to its new hash.
+      void moveBookStats(retiredTombstone.hash, {
+        bookMd5: book.hash,
+        title: book.title ?? '',
+        authors: book.author ?? '',
+      });
     }
 
     // The target config and its paired audio are durable. Duplicate and old

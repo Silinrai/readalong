@@ -138,6 +138,8 @@ class PlayoutControlArgs {
     var loopEndMs: Double? = null
     // Readalong: set-volume, 0..1 (the sleep timer's fade-out).
     var volume: Double? = null
+    // Readalong: pause/abort for this session only (null: whatever plays).
+    var session: Int? = null
 }
 
 @TauriPlugin(
@@ -157,6 +159,16 @@ class NativeTTSPlugin(private val activity: Activity) : Plugin(activity) {
         var NOTIFICATION_TEXT = "Ready to read aloud"
         var FOREGROUND_SERVICE_TITLE = "Read Aloud"
         var FOREGROUND_SERVICE_TEXT = "Ready to read aloud"
+
+        // Readalong: the book's narration plays in this plugin's ExoPlayer,
+        // outside the WebView, which Android throttles or freezes with the
+        // screen off. The media service pauses and resumes it directly for a
+        // call, unplugged headphones or the notification's Pause, instead of
+        // waiting for JavaScript that may not run.
+        @Volatile
+        var pauseNarrationNow: (() -> Unit)? = null
+        @Volatile
+        var resumeNarrationNow: (() -> Unit)? = null
     }
 
     private var textToSpeech: TextToSpeech? = null
@@ -753,14 +765,15 @@ class NativeTTSPlugin(private val activity: Activity) : Plugin(activity) {
                         invoke.resolve(JSObject().apply { put("session", JSONObject.NULL) })
                     }
                     "abort" -> {
-                        abortPlayout()
+                        if (args.session == null || args.session == playoutSession) abortPlayout()
                         invoke.resolve(JSObject().apply { put("session", JSONObject.NULL) })
                     }
                     "pause" -> {
-                        playoutPlayer?.pause()
+                        if (args.session == null || args.session == playoutSession) playoutPlayer?.pause()
                         invoke.resolve(JSObject().apply { put("session", JSONObject.NULL) })
                     }
                     "resume" -> {
+                        cancelIdleTimer()
                         playoutPlayer?.play()
                         invoke.resolve(JSObject().apply { put("session", JSONObject.NULL) })
                     }
@@ -779,6 +792,7 @@ class NativeTTSPlugin(private val activity: Activity) : Plugin(activity) {
                         if (path.isNullOrEmpty()) {
                             invoke.reject("playout load requires path")
                         } else {
+                            cancelIdleTimer()
                             loadContinuousFile(path, args.positionMs ?: 0.0, args.start, args.end)
                             invoke.resolve(JSObject().apply { put("session", playoutSession) })
                         }
@@ -788,6 +802,7 @@ class NativeTTSPlugin(private val activity: Activity) : Plugin(activity) {
                         if (path.isNullOrEmpty()) {
                             invoke.reject("playout queue requires path")
                         } else {
+                            cancelIdleTimer()
                             queueContinuousFile(path, args.start, args.end)
                             invoke.resolve(JSObject().apply { put("session", playoutSession) })
                         }
@@ -844,7 +859,19 @@ class NativeTTSPlugin(private val activity: Activity) : Plugin(activity) {
             player.addListener(playoutListener)
             player.setPlaybackSpeed(playoutRate)
             player.volume = playoutVolume
+            // Speech; the media service owns audio focus. Unplugging
+            // headphones pauses even if nothing else gets to run.
+            player.setAudioAttributes(
+                androidx.media3.common.AudioAttributes.Builder()
+                    .setUsage(androidx.media3.common.C.USAGE_MEDIA)
+                    .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_SPEECH)
+                    .build(),
+                false,
+            )
+            player.setHandleAudioBecomingNoisy(true)
             playoutPlayer = player
+            pauseNarrationNow = { activity.runOnUiThread { playoutPlayer?.pause() } }
+            resumeNarrationNow = { activity.runOnUiThread { playoutPlayer?.play() } }
         }
     }
 
@@ -1028,8 +1055,12 @@ class NativeTTSPlugin(private val activity: Activity) : Plugin(activity) {
 
     private fun shutdownTTSEngine() {
         try {
-            abortPlayout()
-            MediaPlaybackService.requestDeactivation()
+            // Readalong: never while speaking, and never take down a loaded
+            // narration (a long pause would come back to a dead player) or
+            // the media session (its notification belongs to the JS session,
+            // which nothing would bring back).
+            if (isSpeaking.get() || playoutPlayer?.isPlaying == true) return
+            if (playoutPlayer == null || playoutCurrentIndex < 0) abortPlayout()
 
             textToSpeech?.shutdown()
             textToSpeech = null
@@ -1051,6 +1082,8 @@ class NativeTTSPlugin(private val activity: Activity) : Plugin(activity) {
     fun destroy() {
         try {
             cancelIdleTimer()
+            pauseNarrationNow = null
+            resumeNarrationNow = null
 
             MediaPlaybackService.requestDeactivation()
             MediaPlaybackService.setPluginEventTrigger(null)

@@ -8,15 +8,17 @@ import type { EnvConfigType } from '@/services/environment';
 import { useBookDataStore } from '@/store/bookDataStore';
 import { useReaderStore } from '@/store/readerStore';
 import { useSettingsStore } from '@/store/settingsStore';
+import { useCustomFontStore } from '@/store/customFontStore';
 import { getStyles } from '@/utils/style';
 
-/** The entries of `patch` that differ from `current`. */
+/** The entries of `patch` that differ from `current`. A key the patch sets
+ *  to undefined clears it (a reset to a default that is unset). */
 export const changedEntries = (
   current: Partial<ViewSettings>,
   patch: Partial<ViewSettings>,
 ): [keyof ViewSettings, unknown][] =>
   (Object.entries(patch) as [keyof ViewSettings, unknown][]).filter(
-    ([key, value]) => value !== undefined && current[key] !== value,
+    ([key, value]) => current[key] !== value,
   );
 
 export const applyViewSettingsPatch = async (
@@ -42,10 +44,13 @@ export const applyViewSettingsPatch = async (
       (viewSettings as unknown as Record<string, unknown>)[name] = value;
     }
     setViewSettings(key, viewSettings);
-    getView(key)?.renderer.setStyles?.(getStyles(viewSettings));
+    getView(key)?.renderer.setStyles?.(
+      getStyles(viewSettings, undefined, useCustomFontStore.getState().getLoadedFonts()),
+    );
     const config = getConfig(key);
     if (getViewState(key)?.isPrimary && config) {
-      await saveConfig(envConfig, key, config, settings);
+      // The settings now in effect (see helpers/settings.ts).
+      await saveConfig(envConfig, key, config, useSettingsStore.getState().settings);
     }
   };
 

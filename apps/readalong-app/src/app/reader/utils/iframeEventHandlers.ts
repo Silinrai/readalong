@@ -62,6 +62,8 @@ interface LayeredTurnTouchClaim {
   claimed: boolean;
   ended: boolean;
   cleanupTimer?: ReturnType<typeof setTimeout>;
+  /** The claimed drag sprang back without turning the page. */
+  springBack?: boolean;
 }
 const layeredTurnTouchClaims = new Map<string, LayeredTurnTouchClaim>();
 const SYNTHESIZED_CLICK_SWIPE_DISTANCE_PX = 15;
@@ -171,6 +173,17 @@ export const endLayeredTurnTouch = (bookKey: string) => {
   }, SYNTHESIZED_CLICK_SUPPRESSION_MS);
 };
 
+/**
+ * Readalong: the claimed drag ended without turning the page. A browser only
+ * synthesizes a click for a touch that barely moved, so that click is a tap
+ * whose finger rolled a few pixels: it must still show the bars instead of
+ * being swallowed as the end of a swipe.
+ */
+export const markLayeredTurnSpringBack = (bookKey: string) => {
+  const state = layeredTurnTouchClaims.get(bookKey);
+  if (state) state.springBack = true;
+};
+
 /** Cancel a touch without retaining synthesized-click suppression state. */
 export const cancelLayeredTurnTouch = (bookKey: string) => {
   setLayeredTurnTouchClaimed(bookKey, false);
@@ -230,6 +243,7 @@ const consumeSuppressedDomClick = (bookKey: string, event: MouseEvent, now: numb
   const layeredClaim = layeredTurnTouchClaims.get(bookKey);
   if (layeredClaim?.claimed && layeredClaim.ended) {
     clearLayeredTurnTouchClaim(bookKey);
+    if (layeredClaim.springBack) return false;
     suppressDomClick(event);
     return true;
   }
@@ -697,7 +711,7 @@ export const handleClick = (
     // can land one task after the iframe touchend/click. Re-check ownership at
     // dispatch time so an early 1–6px claim cannot slip through that gap.
     const lateLayeredClaim = layeredTurnTouchClaims.get(bookKey);
-    if (lateLayeredClaim?.claimed && lateLayeredClaim.ended) {
+    if (lateLayeredClaim?.claimed && lateLayeredClaim.ended && !lateLayeredClaim.springBack) {
       clearLayeredTurnTouchClaim(bookKey);
       if (lastClickTime === now) lastClickTime = 0;
       return;

@@ -15,7 +15,11 @@ import {
 import { getInitializedAppService, isTauriAppPlatform } from '@/services/environment';
 import { detectViewTransitionGroup } from '@/utils/viewTransition';
 import { TURN_GESTURE_LEFT_INSET_ATTRIBUTE } from '../utils/brightnessGesture';
-import { isLayeredTurnTouchActive, setLayeredTurnTouchClaimed } from '../utils/iframeEventHandlers';
+import {
+  isLayeredTurnTouchActive,
+  markLayeredTurnSpringBack,
+  setLayeredTurnTouchClaimed,
+} from '../utils/iframeEventHandlers';
 import { CapturedPageTurn, CapturedTurnStyle, type CapturedTurnHost } from '../utils/capturedTurn';
 import { NativePageTurn, type NativePaperResult } from '../utils/nativePageTurn';
 import { RetainedPageTurn } from '../utils/retainedPageTurn';
@@ -340,6 +344,7 @@ export const useCapturedTurn = (bookKey: string, viewRef: React.RefObject<Foliat
       } else if (detail.phase === 'ready') {
         clearToolbarSyncClass();
       } else if (detail.phase === 'cancelled') {
+        markLayeredTurnSpringBack(bookKey);
         // Readalong: a tap that hid the bars meanwhile keeps them hidden.
         const shouldRestore =
           restoreToolbarOnCancelRef.current && !takeTapHidBarsDuringTurn(bookKey);
@@ -1044,6 +1049,7 @@ export const useCapturedTurn = (bookKey: string, viewRef: React.RefObject<Foliat
     // CapturedPageTurn serializes endDrag behind an in-flight beginDrag, so
     // queue release immediately. This also keeps a following gesture behind
     // the complete begin/end pair instead of letting it supersede the turn.
+    if (!commit) markLayeredTurnSpringBack(bookKey);
     afterDrag(state, controller.endDrag(commit, releaseVelocity));
   };
 

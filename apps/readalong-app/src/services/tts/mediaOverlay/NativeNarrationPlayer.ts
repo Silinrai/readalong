@@ -79,6 +79,9 @@ export class NativeNarrationPlayer {
 
   #nativeSession: Promise<number> | null = null;
   #resolvedSession: number | null = null;
+  /** The last native session this player started; -1 before it started one
+   *  (a scoped command for -1 matches no session, so it does nothing). */
+  #lastSession = -1;
   #listener: PluginListener | null = null;
   #listenerStarted = false;
   #href: string | null = null;
@@ -277,7 +280,10 @@ export class NativeNarrationPlayer {
     const session = invoke<{ session: number }>('plugin:native-tts|playout_control', {
       payload: { action: 'start-session' },
     }).then((res) => {
-      if (this.#nativeSession === session) this.#resolvedSession = res.session;
+      if (this.#nativeSession === session) {
+        this.#resolvedSession = res.session;
+        this.#lastSession = res.session;
+      }
       return res.session;
     });
     this.#nativeSession = session;
@@ -295,8 +301,10 @@ export class NativeNarrationPlayer {
     this.#resolvedSession = null;
     this.#ended = false;
     this.#stopPolling();
+    // Readalong: only this player's own native session (see release()).
+    const session = this.#lastSession;
     void invoke('plugin:native-tts|playout_control', {
-      payload: { action: abort ? 'abort' : 'pause' },
+      payload: { action: abort ? 'abort' : 'pause', session },
     }).catch(() => {});
   }
 
@@ -494,9 +502,9 @@ export class NativeNarrationPlayer {
     this.#userPaused = true;
     this.#cache = { mediaSec, playing: false, at: performance.now() };
     this.#stopPolling();
-    void invoke('plugin:native-tts|playout_control', { payload: { action: 'pause' } }).catch(
-      () => {},
-    );
+    void invoke('plugin:native-tts|playout_control', {
+      payload: { action: 'pause', session: this.#lastSession },
+    }).catch(() => {});
   }
 
   async setRate(rate: number): Promise<void> {
@@ -515,6 +523,11 @@ export class NativeNarrationPlayer {
   }
 
   async release(): Promise<void> {
+    // Readalong: there is one native player and a restart makes a new
+    // controller, whose session may already be playing by the time this old
+    // one is torn down. Scope the pause and abort to this player's session
+    // so they can't stop the new narration.
+    const session = this.#lastSession;
     this.#forgetLoop();
     this.pause();
     this.#href = null;
@@ -524,9 +537,9 @@ export class NativeNarrationPlayer {
     await this.#pruneStaged();
     this.#nativeSession = null;
     this.#resolvedSession = null;
-    await invoke('plugin:native-tts|playout_control', { payload: { action: 'abort' } }).catch(
-      () => {},
-    );
+    await invoke('plugin:native-tts|playout_control', {
+      payload: { action: 'abort', session },
+    }).catch(() => {});
   }
 
   async shutdown(): Promise<void> {

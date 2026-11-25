@@ -68,6 +68,7 @@ vi.mock('@/utils/nav', () => ({
   closeReaderWindowOrGoToLibrary: vi.fn(),
   navigateToLibrary: h.navigateToLibrary,
   ensureMainLibraryWindow: h.ensureMainLibraryWindow,
+  takeReaderPushedFromLibrary: () => false,
 }));
 vi.mock('@/utils/window', () => ({
   tauriHandleClose: h.tauriHandleClose,

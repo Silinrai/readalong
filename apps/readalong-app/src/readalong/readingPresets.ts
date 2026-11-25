@@ -6,6 +6,9 @@ import { stubTranslation as _ } from '@/utils/misc';
 
 export const PRESET_KEYS = [
   'defaultFont',
+  // The sheet's typeface chips set these too (visual/typeface.ts).
+  'serifFont',
+  'sansSerifFont',
   'defaultFontSize',
   'fontWeight',
   'textStrokePx',
@@ -21,6 +24,11 @@ export const PRESET_KEYS = [
   'marginBottomPx',
   'marginLeftPx',
   'marginRightPx',
+  // Horizontal pages, and pages with the header or footer hidden, use these.
+  'compactMarginTopPx',
+  'compactMarginBottomPx',
+  'compactMarginLeftPx',
+  'compactMarginRightPx',
   'gapPercent',
   'backgroundTextureId',
   'backgroundTextureIdDark',
@@ -94,6 +102,9 @@ export const capturePreset = (viewSettings: ViewSettings): PresetValues => {
   for (const key of PRESET_KEYS) {
     if (viewSettings[key] !== undefined) values[key] = viewSettings[key];
   }
+  // "No night texture" is unset; save it as 'same' (use the day texture),
+  // or applying the look would keep another look's night texture.
+  values['backgroundTextureIdDark'] = viewSettings.backgroundTextureIdDark ?? 'same';
   return values as PresetValues;
 };
 

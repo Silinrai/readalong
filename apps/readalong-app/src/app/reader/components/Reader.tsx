@@ -33,6 +33,7 @@ import { Toast } from '@/components/Toast';
 import { getLocale } from '@/utils/misc';
 import { initDayjs } from '@/utils/time';
 import ReaderContent from './ReaderContent';
+import { takeReaderPushedFromLibrary } from '@/utils/nav';
 import { showSystemStatusBar } from '@/readalong/statusBar';
 
 /*
@@ -106,7 +107,12 @@ const Reader: React.FC<{ ids?: string }> = ({ ids }) => {
       } else if (getIsNotebookVisible() && !isNotebookPinned) {
         setNotebookVisible(false);
       } else {
-        void eventDispatcher.dispatch('close-reader', { onClose: () => router.back() });
+        void eventDispatcher.dispatch('close-reader', {
+          onClose: () => {
+            takeReaderPushedFromLibrary();
+            router.back();
+          },
+        });
       }
       return true;
     }

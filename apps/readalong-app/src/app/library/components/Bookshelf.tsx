@@ -745,11 +745,13 @@ const Bookshelf: React.FC<BookshelfProps> = ({
     const ids = expandBookshelfSelection(getSelectedBooks(), sortedBookshelfItems);
     const books = ids
       .map((id) => filteredBooks.find((book) => book.hash === id))
-      .filter((book): book is Book => !!book && book.format === 'EPUB');
+      // A book that already has narration needn't be voiced again (and its
+      // audio makes it too big to send).
+      .filter((book): book is Book => !!book && book.format === 'EPUB' && !book.hasNarration);
     if (books.length === 0) {
       eventDispatcher.dispatch('toast', {
         type: 'info',
-        message: _('Only EPUB books can be voiced on the PC.'),
+        message: _('Only EPUB books without narration can be voiced on the PC.'),
         timeout: 4000,
       });
       return;

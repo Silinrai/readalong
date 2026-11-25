@@ -39,6 +39,7 @@ import NumberInput from './NumberInput';
 import FontDropdown from './FontDropDown';
 import CustomFonts from './CustomFonts';
 import { SHOW_TRANSLATION } from '@/readalong/features';
+import { getRelayoutQueue } from '@/readalong/useLiveRelayout';
 import { Toggle } from '../primitives/toggle';
 
 const genCJKFontsList = (sysFonts: string[]) => {
@@ -237,7 +238,10 @@ const FontPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset 
   }, [appService]);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'defaultFont', defaultFont);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('defaultFont', () =>
+      saveViewSettings(envConfig, bookKey, 'defaultFont', defaultFont),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultFont]);
 
@@ -247,56 +251,86 @@ const FontPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset 
   }, [defaultCJKFont]);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'defaultFontSize', defaultFontSize);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('defaultFontSize', () =>
+      saveViewSettings(envConfig, bookKey, 'defaultFontSize', defaultFontSize),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultFontSize]);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'minimumFontSize', minFontSize);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('minimumFontSize', () =>
+      saveViewSettings(envConfig, bookKey, 'minimumFontSize', minFontSize),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [minFontSize]);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'fontWeight', fontWeight);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('fontWeight', () =>
+      saveViewSettings(envConfig, bookKey, 'fontWeight', fontWeight),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fontWeight]);
 
   useEffect(() => {
     // Readalong: unset means 0; don't restyle the book just for opening this.
     if ((viewSettings.textShadowLevel ?? 0) === textShadowLevel) return;
-    saveViewSettings(envConfig, bookKey, 'textShadowLevel', textShadowLevel);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('textShadowLevel', () =>
+      saveViewSettings(envConfig, bookKey, 'textShadowLevel', textShadowLevel),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textShadowLevel]);
 
   useEffect(() => {
     // Readalong: unset means 0; don't restyle the book just for opening this.
     if ((viewSettings.textStrokePx ?? 0) === textStrokePx) return;
-    saveViewSettings(envConfig, bookKey, 'textStrokePx', textStrokePx);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('textStrokePx', () =>
+      saveViewSettings(envConfig, bookKey, 'textStrokePx', textStrokePx),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textStrokePx]);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'serifFont', serifFont);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('serifFont', () =>
+      saveViewSettings(envConfig, bookKey, 'serifFont', serifFont),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serifFont]);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'sansSerifFont', sansSerifFont);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('sansSerifFont', () =>
+      saveViewSettings(envConfig, bookKey, 'sansSerifFont', sansSerifFont),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sansSerifFont]);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'monospaceFont', monospaceFont);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('monospaceFont', () =>
+      saveViewSettings(envConfig, bookKey, 'monospaceFont', monospaceFont),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monospaceFont]);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'ignorePublisherFonts', ignorePublisherFonts);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('ignorePublisherFonts', () =>
+      saveViewSettings(envConfig, bookKey, 'ignorePublisherFonts', ignorePublisherFonts),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ignorePublisherFonts]);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'overrideFont', overrideFont);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('overrideFont', () =>
+      saveViewSettings(envConfig, bookKey, 'overrideFont', overrideFont),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overrideFont]);
 

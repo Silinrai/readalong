@@ -28,12 +28,13 @@ describe('useMiniPlayerAutoHide', () => {
     vi.useRealTimers();
   });
 
-  it('shows the full player when the session starts, then hides it after 5s', () => {
+  // Readalong: the card lingers 2s, not 5s (it sits where the menu tap goes).
+  it('shows the full player when the session starts, then hides it after 2s', () => {
     const { result } = renderHook(() => useMiniPlayerAutoHide(BOOK, 'full', true));
     expect(result.current).toBe(true);
 
     act(() => {
-      vi.advanceTimersByTime(4999);
+      vi.advanceTimersByTime(1999);
     });
     expect(result.current).toBe(true);
 
@@ -43,7 +44,7 @@ describe('useMiniPlayerAutoHide', () => {
     expect(result.current).toBe(false);
   });
 
-  it('keeps the full player up while buffering, then hides 5s after audio starts', () => {
+  it('keeps the full player up while buffering, then hides 2s after audio starts', () => {
     // A cold GPU worker can take far longer than 5s for the first sentence: the
     // spinning play button must stay in sight until something is heard.
     let buffering = true;
@@ -58,7 +59,7 @@ describe('useMiniPlayerAutoHide', () => {
     buffering = false;
     rerender();
     act(() => {
-      vi.advanceTimersByTime(4999);
+      vi.advanceTimersByTime(1999);
     });
     expect(result.current).toBe(true);
     act(() => {
@@ -91,29 +92,21 @@ describe('useMiniPlayerAutoHide', () => {
     expect(result.current).toBe(false);
   });
 
-  it('brings a hidden full player back once a stall lasts 500ms, then hides it 5s after audio resumes', () => {
+  // Readalong: a stall no longer brings a hidden card back over the page,
+  // where it took the next tap meant for the menu.
+  it('leaves a hidden full player hidden through a long stall', () => {
     let buffering = false;
     const { result, rerender } = renderHook(() =>
       useMiniPlayerAutoHide(BOOK, 'full', true, buffering),
     );
     act(() => {
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(2000);
     });
+    expect(result.current).toBe(false);
     buffering = true;
     rerender();
     act(() => {
-      vi.advanceTimersByTime(500);
-    });
-    expect(result.current).toBe(true);
-
-    buffering = false;
-    rerender();
-    act(() => {
-      vi.advanceTimersByTime(4999);
-    });
-    expect(result.current).toBe(true);
-    act(() => {
-      vi.advanceTimersByTime(1);
+      vi.advanceTimersByTime(30_000);
     });
     expect(result.current).toBe(false);
   });
@@ -128,7 +121,7 @@ describe('useMiniPlayerAutoHide', () => {
     expect(result.current).toBe(true);
   });
 
-  it('re-shows the full player when the toolbar comes back, and hides 5s after it clears', () => {
+  it('re-shows the full player when the toolbar comes back, and hides 2s after it clears', () => {
     const { result, rerender } = renderHook(() => useMiniPlayerAutoHide(BOOK, 'full', true));
 
     act(() => {
@@ -154,16 +147,16 @@ describe('useMiniPlayerAutoHide', () => {
     const { result, rerender } = renderHook(() => useMiniPlayerAutoHide(BOOK, 'full', true));
 
     act(() => {
-      vi.advanceTimersByTime(4000);
+      vi.advanceTimersByTime(1500);
     });
     setHovered(BOOK);
     rerender();
     setHovered('');
     rerender();
 
-    // The stale 1s remainder of the first countdown must not fire.
+    // The stale remainder of the first countdown must not fire.
     act(() => {
-      vi.advanceTimersByTime(4999);
+      vi.advanceTimersByTime(1999);
     });
     expect(result.current).toBe(true);
 

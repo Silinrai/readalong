@@ -15,6 +15,7 @@ import { eventDispatcher } from '@/utils/event';
 import { registerTouchInterceptor, type TouchDetail } from '@/app/reader/hooks/useTouchInterceptor';
 import { classifyNarrationSwipe, isNarrationDrag, textRangeNearWindowPoint } from './gestures';
 import { markSwipeOff, markUserPageTurn } from './turnIntent';
+import { startsOnSystemGestureEdge } from '@/readalong/gestureEdge';
 import type { NarrationUi } from './useNarrationFollow';
 
 // Above the fixed-layout swipe flip (0) and the captured turn (5); the reading
@@ -80,6 +81,8 @@ export const useNarrationGestures = ({
 
     let drag: { range: Range; index: number } | null = null;
     let dragging = false;
+    // A touch that started on the system's bottom gesture strip is Android's.
+    let systemEdge = false;
     const endDrag = () => {
       if (drag) controller.clearSeekPreview();
       drag = null;
@@ -99,8 +102,11 @@ export const useNarrationGestures = ({
         }
         if (detail.phase === 'start' || detail.phase === 'cancel') {
           endDrag();
+          systemEdge =
+            detail.phase === 'start' && startsOnSystemGestureEdge(detail.touchStart.screenY);
           return false;
         }
+        if (systemEdge) return false;
         if (detail.phase === 'move') {
           if (!dragging && !isNarrationDrag(detail.deltaX, detail.deltaY)) return false;
           dragging = true;
@@ -120,14 +126,24 @@ export const useNarrationGestures = ({
         }
         if (classifyNarrationSwipe(detail.deltaX, detail.deltaY) === 'turn') {
           if (viewSettings?.disableSwipe) return false;
-          // "I'll read now": narration off, the page turns as usual.
+          // "I'll read now": narration off, the page turns as usual. Only if
+          // it did turn: a short swipe springs back, and the voice goes on.
           const view = getView(bookKey);
+          const before = useReaderStore.getState().getProgress(bookKey)?.location;
           markSwipeOff(view);
-          const { toast, translate: _ } = uiRef.current;
-          toast(_('Narration off'));
-          setTimeout(() => {
-            if (live()) eventDispatcher.dispatch('tts-stop', { bookKey });
-          }, SWIPE_OFF_STOP_DELAY_MS);
+          // A slow turn animation can land after the first look: look twice.
+          const check = (lastTry: boolean) => {
+            if (!live()) return;
+            const after = useReaderStore.getState().getProgress(bookKey)?.location;
+            if (after === before) {
+              if (!lastTry) setTimeout(() => check(true), SWIPE_OFF_STOP_DELAY_MS * 2);
+              return;
+            }
+            const { toast, translate: _ } = uiRef.current;
+            toast(_('Narration off'));
+            eventDispatcher.dispatch('tts-stop', { bookKey });
+          };
+          setTimeout(() => check(false), SWIPE_OFF_STOP_DELAY_MS);
         }
         return false;
       },

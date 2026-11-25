@@ -9,7 +9,6 @@ import { useResetViewSettings } from '@/hooks/useResetSettings';
 import { SettingsPanelPanelProp } from './SettingsDialog';
 import { saveViewSettings } from '@/helpers/settings';
 import { validateCSS, formatCSS } from '@/utils/css';
-import { getStyles } from '@/utils/style';
 import { BoxedList } from './primitives';
 
 type CSSType = 'book' | 'reader';
@@ -18,7 +17,7 @@ const MiscPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset 
   const _ = useTranslation();
   const { appService, envConfig } = useEnv();
   const { settings } = useSettingsStore();
-  const { getView, getViewSettings, setViewSettings } = useReaderStore();
+  const { getViewSettings } = useReaderStore();
   const viewSettings = getViewSettings(bookKey) || settings.globalViewSettings;
 
   const [draftContentStylesheet, setDraftContentStylesheet] = useState(viewSettings.userStylesheet);
@@ -90,22 +89,21 @@ const MiscPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset 
     if (type === 'book') {
       setDraftContentStylesheet(formattedCSS);
       setDraftContentStylesheetSaved(true);
-      viewSettings.userStylesheet = formattedCSS;
     } else {
       setDraftUIStylesheet(formattedCSS);
       setDraftUIStylesheetSaved(true);
-      viewSettings.userUIStylesheet = formattedCSS;
     }
 
-    setViewSettings(bookKey, { ...viewSettings });
-    getView(bookKey)?.renderer.setStyles?.(getStyles(viewSettings));
+    // Readalong: let saveViewSettings change the value, so it sees the
+    // change and writes the book's file (and restyles every open book for
+    // content CSS). Setting it first made it skip the save.
     saveViewSettings(
       envConfig,
       bookKey,
       type === 'book' ? 'userStylesheet' : 'userUIStylesheet',
       formattedCSS,
       false,
-      false,
+      type === 'book',
     );
   };
 

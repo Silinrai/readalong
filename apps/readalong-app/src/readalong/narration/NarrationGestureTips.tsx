@@ -5,6 +5,9 @@ import clsx from 'clsx';
 import { useEffect, useId, useRef, useState } from 'react';
 import { MdChevronLeft, MdChevronRight, MdMenu, MdSwipe, MdSwipeVertical } from 'react-icons/md';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useDeviceControlStore } from '@/store/deviceStore';
+import { eventDispatcher } from '@/utils/event';
+import { getOSPlatform } from '@/utils/misc';
 import { getReadingAreaRect } from '@/app/reader/hooks/useAutoPageTurn';
 
 export const NARRATION_TIPS_KEY = 'readalong-narration-tips-seen';
@@ -33,10 +36,10 @@ type Props = {
   customZones?: boolean;
 };
 
-// Readalong's default tap zones: the middle quarter shows the menu, the sides
-// turn the page (usePagination).
-const SIDE_ZONE = '37.5%';
-const MIDDLE_ZONE = '25%';
+// Readalong's tap zones while narration plays (usePagination): the middle
+// half shows the menu, the sides turn the page.
+const SIDE_ZONE = '25%';
+const MIDDLE_ZONE = '50%';
 
 export const NarrationGestureTips = ({ bookKey, scrolled, customZones = false }: Props) => {
   const _ = useTranslation();
@@ -56,13 +59,33 @@ export const NarrationGestureTips = ({ bookKey, scrolled, customZones = false }:
     return () => cancelAnimationFrame(frame);
   }, [open]);
 
-  if (!open) return null;
-
   const dismiss = () => {
     writeSeen();
     setOpen(false);
     returnFocusRef.current?.focus?.();
   };
+  // Android's Back closes the tips, not the book underneath. Registered
+  // after the reader's own Back handler, so it is asked first.
+  const dismissRef = useRef(dismiss);
+  dismissRef.current = dismiss;
+  useEffect(() => {
+    if (!open || getOSPlatform() !== 'android') return;
+    const onBack = (event: CustomEvent) => {
+      if (event.detail?.keyName !== 'Back') return false;
+      dismissRef.current();
+      return true;
+    };
+    const { acquireBackKeyInterception, releaseBackKeyInterception } =
+      useDeviceControlStore.getState();
+    acquireBackKeyInterception();
+    eventDispatcher.onSync('native-key-down', onBack);
+    return () => {
+      eventDispatcher.offSync('native-key-down', onBack);
+      releaseBackKeyInterception();
+    };
+  }, [open]);
+
+  if (!open) return null;
 
   const area = getReadingAreaRect(bookKey);
   const box = area

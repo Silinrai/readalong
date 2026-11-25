@@ -453,7 +453,13 @@ export class TTSController extends EventTarget {
   //     gesture requirement off). Play from the app still resumes after that.
   #syncAudioKeepAlive() {
     clearTimeout(this.#pausedKeepAliveTimer);
-    const directSpeak = this.ttsClient.getCapabilities().mediaClock === false;
+    // Readalong: the book's narration also plays outside the page (the
+    // native player), so the page is silent and gets throttled with the
+    // screen off: its marks, sleep timer and notification buttons fell
+    // behind. Keep it awake the same way.
+    const directSpeak =
+      this.ttsClient.getCapabilities().mediaClock === false ||
+      (this.ttsClient === this.ttsMediaOverlayClient && this.ttsMediaOverlayClient.isNative);
     const paused = this.state.includes('paused');
     if (!this.appService?.isAndroidApp || !(directSpeak || paused)) {
       stopAudioKeepAlive();

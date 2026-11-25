@@ -200,6 +200,11 @@ const ThemePanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset
     });
     resetThemeScopes();
     setSelectedTextureId('none');
+    // Readalong: the night texture too, or it stays on in dark mode.
+    if (bookKey) {
+      setNightTextureId('same');
+      saveViewSettings(envConfig, bookKey, 'backgroundTextureIdDark', 'same');
+    }
     setBackgroundOpacity(0.6);
     setBackgroundSize('cover');
     setCustomHighlightColors(HIGHLIGHT_COLOR_HEX);

@@ -137,6 +137,8 @@ export const BACKUP_SETTINGS_CREDENTIAL_FIELDS = [
   's3.secretAccessKey',
   'aiSettings.aiGatewayApiKey',
   'aiSettings.openrouterApiKey',
+  // Readalong: the PC queue's pairing code controls the PC's queue.
+  'audiobookQueueToken',
 ] as const;
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>

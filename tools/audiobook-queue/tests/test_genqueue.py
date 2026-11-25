@@ -559,3 +559,67 @@ def test_drop_folder_queues_settled_epubs_and_delivers_finished_ones(env):
     assert box.deliver() == ["finished: Dropped Book (narrated).epub"]
     assert (tmp / "Inbox" / "Finished" / "Dropped Book (narrated).epub").read_bytes() == b"narrated"
     assert box.deliver() == []                    # unchanged: not copied again
+
+
+# --- found by the phone-side bug hunt ------------------------------------------
+
+def test_an_upload_that_never_finished_cant_be_retried(env):
+    store, tmp = env
+    cut = store.create(checksum="upload:1", title="Half", state="uploading")
+    store.update(cut.id, state="failed", error="Upload cut off")
+    with pytest.raises(intake.IntakeError, match="send it again"):
+        intake.retry(store, cut.id)
+
+
+def test_looking_up_a_removed_job_brings_it_back_to_the_list(env):
+    store, tmp = env
+    job, _ = queued(store, tmp, "A")
+    store.update(job.id, hidden=True)
+    backend = FakeBackend(book(1, 2))
+    w = Worker(store, backend, tmp, poll=0.01)
+    api = Api(store, w, tmp)
+    httpd = serve(api, "127.0.0.1", 0)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    try:
+        url = (f"http://127.0.0.1:{httpd.server_address[1]}/api/lookup"
+               f"?sha256={job.checksum}&profile=")
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {get_token(store)}"})
+        with urllib.request.urlopen(req) as r:
+            assert json.loads(r.read())["job"]["id"] == job.id
+        assert not store.get(job.id).hidden
+    finally:
+        httpd.shutdown()
+
+
+def test_profiles_answer_503_with_a_plain_message_when_voicestudio_is_off(env):
+    store, tmp = env
+
+    class Down(FakeBackend):
+        def profiles(self):
+            raise ConnectionError("refused")
+
+    w = Worker(store, Down(book()), tmp, poll=0.01)
+    api = Api(store, w, tmp)
+    api.backend = w.backend
+    httpd = serve(api, "127.0.0.1", 0)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    try:
+        req = urllib.request.Request(f"http://127.0.0.1:{httpd.server_address[1]}/api/profiles",
+                                     headers={"Authorization": f"Bearer {get_token(store)}"})
+        with pytest.raises(urllib.error.HTTPError) as e:
+            urllib.request.urlopen(req)
+        assert e.value.code == 503
+        assert "VoiceStudio isn't running" in json.loads(e.value.read())["error"]
+    finally:
+        httpd.shutdown()
+
+
+def test_the_same_book_in_two_voices_gets_two_output_folders(env, monkeypatch):
+    store, tmp = env
+    import genqueue.worker as gw
+    monkeypatch.setattr(gw, "POC", tmp)
+    w = Worker(store, FakeBackend(book()), tmp)
+    a = store.create(checksum="same", title="Book", filename="Book.epub", profile="Alice", state="waiting")
+    b = store.create(checksum="same", title="Book", filename="Book.epub", profile="Bob", state="waiting")
+    assert w._default_out(a) != w._default_out(b)
+    assert w._default_out(a) == w._default_out(store.get(a.id))

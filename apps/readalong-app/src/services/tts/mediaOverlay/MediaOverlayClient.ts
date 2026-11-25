@@ -166,6 +166,10 @@ export class MediaOverlayClient implements TTSClient {
   #source: NarrationAudioSource | null = null;
   #section: MediaOverlaySection | null = null;
   #native: boolean;
+  /** Narration plays in the native player, outside the WebView. */
+  get isNative(): boolean {
+    return this.#native;
+  }
   #playback = new AbortController();
   #player: NativeNarrationPlayer | null = null;
   #audio: NarrationClock | null = null;

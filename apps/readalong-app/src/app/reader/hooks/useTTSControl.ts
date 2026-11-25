@@ -47,6 +47,7 @@ import { isHandTurnPending } from '@/readalong/narration/followPolicy';
 import { readTurnIntent } from '@/readalong/narration/turnIntent';
 import { activeTTSRate, playsNarration } from '@/readalong/narration/narrationRate';
 import { effectiveNarrationVolume, effectivePitch } from '@/readalong/playback/profile';
+import { isOnVisiblePage } from '@/readalong/narration/visiblePage';
 import { bookmarkSpokenSentence } from '@/readalong/annotations/bookmarkSpoken';
 
 interface UseTTSControlProps {
@@ -610,7 +611,6 @@ export const useTTSControl = ({ bookKey, onRequestHidePanel }: UseTTSControlProp
       // range.startContainer) or getBoundingClientRect below (READALONG-21).
       if (!range || !isRendered(range)) return;
       if (!view.renderer.scrolled) {
-        view.renderer.scrollToAnchor?.(range);
         // Page-follow measures where the page cuts the whole sounding sentence.
         // A chapter-only pairing highlights a one-character reading dot, so
         // follow its separate full-sentence range when the mark carries one.
@@ -618,7 +618,17 @@ export const useTTSControl = ({ bookKey, onRequestHidePanel }: UseTTSControlProp
           sentenceCfi && sentenceCfi !== cfi
             ? (view.resolveCFI(sentenceCfi).anchor(doc) ?? range)
             : range;
-        followSentenceAcrossPages(followRange);
+        // Readalong: re-anchoring a sentence that is already on screen still
+        // repaints the page background and re-runs the highlight, on every
+        // sentence: the flicker. Only move when it isn't in view, and let
+        // the move land before measuring where the page cuts it.
+        if (isOnVisiblePage(range, getProgress(bookKey)?.range as Range | undefined)) {
+          followSentenceAcrossPages(followRange);
+        } else {
+          void Promise.resolve(view.renderer.scrollToAnchor?.(range)).then(() => {
+            if (ttsControllerRef.current) followSentenceAcrossPages(followRange);
+          });
+        }
       } else {
         const rect = range.getBoundingClientRect();
         const { start, end, sideProp } = view.renderer;

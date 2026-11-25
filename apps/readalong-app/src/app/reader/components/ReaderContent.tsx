@@ -28,6 +28,7 @@ import {
   closeReaderWindowOrGoToLibrary,
   ensureMainLibraryWindow,
   navigateToLibrary,
+  takeReaderPushedFromLibrary,
 } from '@/utils/nav';
 import { clearDiscordPresence } from '@/utils/discord';
 import { getLockedPanX } from '../utils/lockedPan';
@@ -324,7 +325,9 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
     const { setCheckOpenWithBooks, setCheckLastOpenBooks } = useLibraryStore.getState();
     setCheckOpenWithBooks(false);
     setCheckLastOpenBooks(false);
-    navigateToLibrary(router, '', undefined, true);
+    // Pop back to the library entry the reader was pushed from (Readalong).
+    if (takeReaderPushedFromLibrary()) router.back();
+    else navigateToLibrary(router, '', undefined, true);
   };
 
   // Closing tears the book down before the library mounts, which flashed a
@@ -367,15 +370,24 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
     await saveSettings(envConfig, currentSettings);
   };
 
+  // A second Back while the book is still closing joins the first close
+  // instead of closing again (and going back twice).
+  const closingToLibraryRef = useRef(false);
   const handleCloseReaderToLibrary = async (event: CustomEvent): Promise<void> => {
+    if (closingToLibraryRef.current) return;
+    closingToLibraryRef.current = true;
     const onClose = (event.detail as { onClose?: () => void } | undefined)?.onClose;
-    await runNotebookTransition(bookKeys, async () => {
-      const close = async () => {
-        await closeBooks(true);
-        onClose?.();
-      };
-      await (onClose ? leaveToLibrary(close) : close());
-    });
+    try {
+      await runNotebookTransition(bookKeys, async () => {
+        const close = async () => {
+          await closeBooks(true);
+          onClose?.();
+        };
+        await (onClose ? leaveToLibrary(close) : close());
+      });
+    } finally {
+      closingToLibraryRef.current = false;
+    }
   };
 
   // Also wired directly to beforeunload/quit-app/window-close, which pass an

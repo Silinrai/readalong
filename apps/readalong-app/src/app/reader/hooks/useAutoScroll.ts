@@ -434,7 +434,9 @@ export const useAutoScroll = (
     // A tap on the page pauses/resumes the session; consuming the click keeps
     // it from also turning the page or toggling the header/footer bars.
     const onSingleClick = () => {
-      if (!scroller.active) return false;
+      // Narration holds the page while it plays: the paused session gives
+      // the tap back (it shows the bars), rather than restarting itself.
+      if (!scroller.active || (scroller.paused && narrationPlayingRef.current)) return false;
       togglePause();
       return true;
     };

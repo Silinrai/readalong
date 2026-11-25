@@ -150,6 +150,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                     if (coldTtsActive) {
                         resumeColdTts()
                     } else {
+                        NativeTTSPlugin.resumeNarrationNow?.invoke()
                         player.play()
                         pluginEventTrigger?.invoke("media-session-play", JSObject())
                         updatePlaybackState()
@@ -166,6 +167,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 if (coldTtsActive) {
                     pauseColdTts()
                 } else if (player.isPlaying) {
+                    NativeTTSPlugin.pauseNarrationNow?.invoke()
                     player.pause()
                     pluginEventTrigger?.invoke("media-session-pause", JSObject())
                     updatePlaybackState()
@@ -178,6 +180,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 if (coldTtsActive) {
                     pauseColdTts()
                 } else if (player.isPlaying) {
+                    NativeTTSPlugin.pauseNarrationNow?.invoke()
                     player.pause()
                     pluginEventTrigger?.invoke("media-session-pause", JSObject())
                     updatePlaybackState()
@@ -196,6 +199,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             if (coldTtsActive) {
                 pauseColdTts()
             } else if (player.isPlaying) {
+                NativeTTSPlugin.pauseNarrationNow?.invoke()
                 player.pause()
                 pluginEventTrigger?.invoke("media-session-pause", JSObject())
                 updatePlaybackState()
@@ -962,6 +966,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 onPlayFromMediaId(lastBookHash?.let { "$BOOK_MEDIA_ID_PREFIX$it" }, null)
                 return
             }
+            NativeTTSPlugin.resumeNarrationNow?.invoke()
             player.play()
             pluginEventTrigger?.invoke("media-session-play", JSObject())
             updatePlaybackState()
@@ -985,6 +990,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 }
                 return
             }
+            NativeTTSPlugin.pauseNarrationNow?.invoke()
             player.pause()
             pluginEventTrigger?.invoke("media-session-pause", JSObject())
             updatePlaybackState()

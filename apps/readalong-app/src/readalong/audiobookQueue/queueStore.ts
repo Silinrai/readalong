@@ -23,6 +23,12 @@ interface QueueState {
   status: QueueStatus | null;
   profiles: VoiceProfile[];
   error: string;
+  /** HTTP status of the last failed request (401: pairing code rejected). */
+  errorStatus?: number;
+  /** Finished audiobooks that couldn't be brought into the library, by job. */
+  importErrors: Record<string, string>;
+  setImportError: (jobId: string, message?: string) => void;
+  dismissUpload: (key: string) => void;
   /** When the PC last answered (ms); the screen says how fresh the data is. */
   updatedAt: number;
   uploads: LocalUpload[];
@@ -47,20 +53,33 @@ export const useAudiobookQueueStore = create<QueueState>((set, get) => ({
   status: null,
   profiles: [],
   error: '',
+  errorStatus: undefined,
+  importErrors: {},
   updatedAt: 0,
   uploads: [],
   busy: false,
 
+  setImportError: (jobId, message) =>
+    set((s) => {
+      const importErrors = { ...s.importErrors };
+      if (message) importErrors[jobId] = message;
+      else delete importErrors[jobId];
+      return { importErrors };
+    }),
+
+  dismissUpload: (key) => set((s) => ({ uploads: s.uploads.filter((u) => u.key !== key) })),
+
   refresh: async (client) => {
     try {
       const status = await client.status();
-      set({ status, error: '', updatedAt: Date.now() });
+      set({ status, error: '', errorStatus: undefined, updatedAt: Date.now() });
     } catch (e) {
-      set({ error: (e as Error).message });
+      set({ error: (e as Error).message, errorStatus: (e as QueueError).status });
     }
   },
 
   loadProfiles: async (client) => {
+    set({ error: '' });
     try {
       set({ profiles: await client.profiles() });
     } catch (e) {
@@ -72,10 +91,14 @@ export const useAudiobookQueueStore = create<QueueState>((set, get) => ({
     set({ busy: true });
     try {
       const result = await action();
-      if (isStatus(result)) set({ status: result, error: '', updatedAt: Date.now() });
-      else await get().refresh(client);
+      if (isStatus(result)) {
+        set({ status: result, error: '', errorStatus: undefined, updatedAt: Date.now() });
+      } else await get().refresh(client);
     } catch (e) {
-      set({ error: e instanceof QueueError ? e.message : String(e) });
+      set({
+        error: e instanceof QueueError ? e.message : String(e),
+        errorStatus: e instanceof QueueError ? e.status : undefined,
+      });
     } finally {
       set({ busy: false });
     }
@@ -117,7 +140,16 @@ export const useAudiobookQueueStore = create<QueueState>((set, get) => ({
     return result;
   },
 
-  reset: () => set({ status: null, profiles: [], error: '', updatedAt: 0, uploads: [] }),
+  reset: () =>
+    set({
+      status: null,
+      profiles: [],
+      error: '',
+      errorStatus: undefined,
+      importErrors: {},
+      updatedAt: 0,
+      uploads: [],
+    }),
 }));
 
 /** Finished jobs with an audiobook the phone hasn't imported yet. */
@@ -126,3 +158,13 @@ export const jobsToImport = (
   imported: Record<string, string> | undefined,
 ): QueueJob[] =>
   jobs.filter((j) => j.state === 'completed' && j.has_output && !(imported && imported[j.id]));
+
+/** A job whose book never finished uploading to the PC: there is no file
+ *  there to voice again, so it can only be sent again from the library. */
+export const isUploadCutOff = (job: QueueJob): boolean => job.checksum.startsWith('upload:');
+
+/** Finished jobs that can leave the list without losing anything: all but a
+ *  completed audiobook the phone hasn't brought into the library yet. */
+export const canHideJob = (job: QueueJob, imported: Record<string, string> | undefined): boolean =>
+  ['completed', 'failed', 'cancelled'].includes(job.state) &&
+  !(job.state === 'completed' && job.has_output && !imported?.[job.id]);

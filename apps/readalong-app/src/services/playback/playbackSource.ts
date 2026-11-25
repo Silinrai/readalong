@@ -63,6 +63,8 @@ export interface PlaybackSource extends EventTarget {
   resume?(): Promise<void>;
   forward(byMark?: boolean): Promise<void>;
   backward(byMark?: boolean): Promise<void>;
+  /** Moves by audio (chapter-only timing) rather than by sentence. */
+  usesAudioTransport?(): boolean;
   setRate(rate: number): Promise<void>;
   /** Readalong: output volume 0..1 (the sleep timer's fade-out). */
   setVolume?(volume: number): Promise<void>;

@@ -909,20 +909,16 @@ class NativeBridgePlugin(private val activity: Activity): Plugin(activity) {
                         compatController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                     }
 
-                    if (isDarkMode) {
-                        controller.setSystemBarsAppearance(
-                            0,
-                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                        )
-                    } else {
-                        controller.setSystemBarsAppearance(
-                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
-                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                        )
-                    }
+                    // Dark icons on light pages, for the navigation bar too now
+                    // that it shows.
+                    val lightBars = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                        WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                    controller.setSystemBarsAppearance(if (isDarkMode) 0 else lightBars, lightBars)
+                    // Readalong: with the app's bars showing, show the system's
+                    // too. A hidden navigation bar made going home take two
+                    // swipes everywhere in the app.
                     if (visible) {
-                        controller.show(WindowInsets.Type.statusBars())
-                        controller.hide(WindowInsets.Type.navigationBars())
+                        controller.show(WindowInsets.Type.systemBars())
                     } else {
                         controller.hide(WindowInsets.Type.systemBars())
                     }
@@ -931,14 +927,10 @@ class NativeBridgePlugin(private val activity: Activity): Plugin(activity) {
                 val compatController = WindowCompat.getInsetsController(window, decorView)
                 compatController.let {
                     it.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                    if (!isDarkMode) {
-                        it.isAppearanceLightStatusBars = true
-                    } else {
-                        it.isAppearanceLightStatusBars = false
-                    }
+                    it.isAppearanceLightStatusBars = !isDarkMode
+                    it.isAppearanceLightNavigationBars = !isDarkMode
                     if (visible) {
-                        it.show(WindowInsetsCompat.Type.statusBars())
-                        it.hide(WindowInsetsCompat.Type.navigationBars())
+                        it.show(WindowInsetsCompat.Type.systemBars())
                     } else {
                         it.hide(WindowInsetsCompat.Type.systemBars())
                     }

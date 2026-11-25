@@ -393,8 +393,12 @@ export const usePagination = (
               return;
             }
             if (!consumed) {
-              const centerStartX = zoneStartX + zoneWidth * 0.375;
-              const centerEndX = zoneStartX + zoneWidth * 0.625;
+              // Readalong: while narration plays a missed menu tap turns the
+              // page and moves the voice, so the middle is wider then: half
+              // the page instead of a quarter (readalong/narration tips match).
+              const narrating = !!getViewState(bookKey)?.ttsEnabled;
+              const centerStartX = zoneStartX + zoneWidth * (narrating ? 0.25 : 0.375);
+              const centerEndX = zoneStartX + zoneWidth * (narrating ? 0.75 : 0.625);
               if (
                 viewSettings.disableClick! ||
                 (screenX >= centerStartX && screenX <= centerEndX)

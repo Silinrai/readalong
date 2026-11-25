@@ -14,9 +14,17 @@ type Props<T extends string> = {
   options: ChipOption<T>[];
   value: T | null;
   onChange: (value: T) => void;
+  /** Shown but not usable (e.g. the book's own layout is in use). */
+  disabled?: boolean;
 };
 
-export const OptionChips = <T extends string>({ label, options, value, onChange }: Props<T>) => (
+export const OptionChips = <T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  disabled,
+}: Props<T>) => (
   <div className='flex flex-col gap-2 px-1 py-1.5' role='group' aria-label={label}>
     <span className='text-base-content/70 text-xs font-medium'>{label}</span>
     <div className='flex flex-wrap gap-2'>
@@ -27,11 +35,12 @@ export const OptionChips = <T extends string>({ label, options, value, onChange 
             key={option.value}
             type='button'
             aria-pressed={pressed}
+            disabled={disabled}
             onClick={() => onChange(option.value)}
             style={option.fontFamily ? { fontFamily: option.fontFamily } : undefined}
             className={clsx(
               'min-h-10 rounded-full border px-3.5 text-sm',
-              'focus-visible:ring-primary outline-none focus-visible:ring-2',
+              'focus-visible:ring-primary outline-none focus-visible:ring-2 disabled:opacity-40',
               pressed
                 ? 'border-primary bg-primary/15 text-base-content eink:bg-base-content eink:text-base-100'
                 : 'border-base-content/20 text-base-content/85 hover:bg-base-content/5',

@@ -1,7 +1,6 @@
 // Readalong: the relayout queue (relayoutQueue.ts) bound to a book's view.
 // Panels that change layout live (font size, spacing, margins, boldness,
 // saved looks) schedule their change here instead of applying it directly.
-import { useRef } from 'react';
 import { useReaderStore } from '@/store/readerStore';
 import type { FoliateView } from '@/types/view';
 import { createRelayoutQueue, type RelayoutQueue } from './relayoutQueue';
@@ -43,13 +42,20 @@ export const waitForRelayout = (view: FoliateView | null | undefined) =>
     armQuiet();
   });
 
-export const useLiveRelayout = (bookKey: string): RelayoutQueue => {
-  const queueRef = useRef<RelayoutQueue | null>(null);
-  if (!queueRef.current) {
+// One queue per book, shared by every panel: the sheet, its margins card and
+// its fine-tune section each made their own, so their restyles overlapped
+// and the page drifted (and a remount of a panel started a fresh queue in
+// the middle of another's relayout).
+const queues = new Map<string, RelayoutQueue>();
+
+/** The book's relayout queue (shared by every panel that changes layout). */
+export const getRelayoutQueue = (bookKey: string): RelayoutQueue => {
+  let queue = queues.get(bookKey);
+  if (!queue) {
     const getView = () => useReaderStore.getState().getView(bookKey);
     // The page engine keeps the reader's place across one restyle; the queue
     // only makes sure restyles never overlap.
-    queueRef.current = createRelayoutQueue({
+    queue = createRelayoutQueue({
       settle: async () => {
         // Narration must read this as a relayout, not a page turn.
         markRelayout();
@@ -57,6 +63,9 @@ export const useLiveRelayout = (bookKey: string): RelayoutQueue => {
         markRelayout();
       },
     });
+    queues.set(bookKey, queue);
   }
-  return queueRef.current;
+  return queue;
 };
+
+export const useLiveRelayout = (bookKey: string): RelayoutQueue => getRelayoutQueue(bookKey);

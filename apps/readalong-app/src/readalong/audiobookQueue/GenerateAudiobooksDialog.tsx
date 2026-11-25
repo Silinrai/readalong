@@ -27,14 +27,21 @@ const GenerateAudiobooksDialog: React.FC<Props> = ({ isOpen, books, onClose, onO
   const [priority, setPriority] = useState(0);
   const [sending, setSending] = useState(false);
   const [playing, setPlaying] = useState('');
+  // Whether the PC answered (with voices, none, or an error). With no voice
+  // list, the PC voices the book with its own default voice.
+  const [profilesLoaded, setProfilesLoaded] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (isOpen && client) void loadProfiles(client);
+    if (!isOpen || !client) return;
+    setProfilesLoaded(false);
+    void loadProfiles(client).finally(() => setProfilesLoaded(true));
   }, [isOpen, client, loadProfiles]);
 
   useEffect(() => {
-    if (!profile && profiles.length) {
+    // Pick the default when nothing is chosen or the chosen voice is gone
+    // (renamed on the PC, or another PC).
+    if (profiles.length && !profiles.some((p) => p.name === profile)) {
       setProfile((profiles.find((p) => p.default) ?? profiles[0])!.name);
     }
   }, [profiles, profile]);
@@ -125,7 +132,11 @@ const GenerateAudiobooksDialog: React.FC<Props> = ({ isOpen, books, onClose, onO
               <div role='radiogroup' aria-label={_('PC Voice')} className='py-1'>
                 {profiles.length === 0 && (
                   <p className='text-base-content/70 px-4 py-3 text-sm'>
-                    {error || _('Loading voices from the PC…')}
+                    {!profilesLoaded
+                      ? _('Loading voices from the PC…')
+                      : error
+                        ? `${error} ${_("The book will use the PC's default voice.")}`
+                        : _("No saved voices on the PC. The book will use the PC's default voice.")}
                   </p>
                 )}
                 {profiles.map((p) => (
@@ -190,7 +201,9 @@ const GenerateAudiobooksDialog: React.FC<Props> = ({ isOpen, books, onClose, onO
             <button
               type='button'
               className='btn btn-primary min-h-11 w-full'
-              disabled={sending || !profile || !books.length}
+              disabled={
+                sending || !books.length || !profilesLoaded || (profiles.length > 0 && !profile)
+              }
               onClick={() => void send()}
             >
               {books.length === 1

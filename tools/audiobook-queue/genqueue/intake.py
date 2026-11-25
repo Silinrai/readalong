@@ -132,5 +132,7 @@ def retry(store: JobStore, job_id: str, force: bool = False) -> Job:
         raise IntakeError("Already completed; nothing to retry")
     if job.state not in FINISHED:
         raise IntakeError(f"Can't retry a job that is {job.state}")
+    if not job.epub_path or not Path(job.epub_path).exists():
+        raise IntakeError("This book never finished uploading; send it again from the library")
     return store.update(job_id, state="waiting", error="", failed_chapters=[], hidden=False,
                         stage_note="Queued again")

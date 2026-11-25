@@ -29,6 +29,7 @@ import {
 import NumberInput from './NumberInput';
 import ColorInput from './theme/ColorInput';
 import { SHOW_TRANSLATION } from '@/readalong/features';
+import { getRelayoutQueue } from '@/readalong/useLiveRelayout';
 import { Toggle } from '../primitives/toggle';
 
 const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset }) => {
@@ -171,37 +172,58 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
   }, []);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'paragraphMargin', paragraphMargin);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('paragraphMargin', () =>
+      saveViewSettings(envConfig, bookKey, 'paragraphMargin', paragraphMargin),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paragraphMargin]);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'lineHeight', lineHeight);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('lineHeight', () =>
+      saveViewSettings(envConfig, bookKey, 'lineHeight', lineHeight),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lineHeight]);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'wordSpacing', wordSpacing);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('wordSpacing', () =>
+      saveViewSettings(envConfig, bookKey, 'wordSpacing', wordSpacing),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wordSpacing]);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'letterSpacing', letterSpacing);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('letterSpacing', () =>
+      saveViewSettings(envConfig, bookKey, 'letterSpacing', letterSpacing),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [letterSpacing]);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'textIndent', textIndent);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('textIndent', () =>
+      saveViewSettings(envConfig, bookKey, 'textIndent', textIndent),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textIndent]);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'fullJustification', fullJustification);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('fullJustification', () =>
+      saveViewSettings(envConfig, bookKey, 'fullJustification', fullJustification),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fullJustification]);
 
   useEffect(() => {
-    saveViewSettings(envConfig, bookKey, 'hyphenation', hyphenation);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('hyphenation', () =>
+      saveViewSettings(envConfig, bookKey, 'hyphenation', hyphenation),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hyphenation]);
 
@@ -210,7 +232,10 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
     if (viewSettings.marginPx !== undefined) {
       saveViewSettings(envConfig, bookKey, 'marginPx', undefined, false, false);
     }
-    saveViewSettings(envConfig, bookKey, 'marginTopPx', marginTopPx, false, false);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('marginTopPx', () =>
+      saveViewSettings(envConfig, bookKey, 'marginTopPx', marginTopPx, false, false),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marginTopPx]);
 
@@ -219,7 +244,10 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
     if (viewSettings.marginPx !== undefined) {
       saveViewSettings(envConfig, bookKey, 'marginPx', undefined, false, false);
     }
-    saveViewSettings(envConfig, bookKey, 'marginBottomPx', marginBottomPx, false, false);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('marginBottomPx', () =>
+      saveViewSettings(envConfig, bookKey, 'marginBottomPx', marginBottomPx, false, false),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marginBottomPx]);
 
@@ -228,7 +256,10 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
     if (viewSettings.marginPx !== undefined) {
       saveViewSettings(envConfig, bookKey, 'marginPx', undefined, false, false);
     }
-    saveViewSettings(envConfig, bookKey, 'marginRightPx', marginRightPx, false, false);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('marginRightPx', () =>
+      saveViewSettings(envConfig, bookKey, 'marginRightPx', marginRightPx, false, false),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marginRightPx]);
 
@@ -237,7 +268,10 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
     if (viewSettings.marginPx !== undefined) {
       saveViewSettings(envConfig, bookKey, 'marginPx', undefined, false, false);
     }
-    saveViewSettings(envConfig, bookKey, 'marginLeftPx', marginLeftPx, false, false);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('marginLeftPx', () =>
+      saveViewSettings(envConfig, bookKey, 'marginLeftPx', marginLeftPx, false, false),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marginLeftPx]);
 
@@ -246,7 +280,10 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
     if (viewSettings.compactMarginPx !== undefined) {
       saveViewSettings(envConfig, bookKey, 'compactMarginPx', undefined, false, false);
     }
-    saveViewSettings(envConfig, bookKey, 'compactMarginTopPx', compactMarginTopPx, false, false);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('compactMarginTopPx', () =>
+      saveViewSettings(envConfig, bookKey, 'compactMarginTopPx', compactMarginTopPx, false, false),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [compactMarginTopPx]);
 
@@ -255,13 +292,15 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
     if (viewSettings.compactMarginPx !== undefined) {
       saveViewSettings(envConfig, bookKey, 'compactMarginPx', undefined, false, false);
     }
-    saveViewSettings(
-      envConfig,
-      bookKey,
-      'compactMarginBottomPx',
-      compactMarginBottomPx,
-      false,
-      false,
+    getRelayoutQueue(bookKey).schedule('compactMarginBottomPx', () =>
+      saveViewSettings(
+        envConfig,
+        bookKey,
+        'compactMarginBottomPx',
+        compactMarginBottomPx,
+        false,
+        false,
+      ),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [compactMarginBottomPx]);
@@ -271,13 +310,15 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
     if (viewSettings.compactMarginPx !== undefined) {
       saveViewSettings(envConfig, bookKey, 'compactMarginPx', undefined, false, false);
     }
-    saveViewSettings(
-      envConfig,
-      bookKey,
-      'compactMarginRightPx',
-      compactMarginRightPx,
-      false,
-      false,
+    getRelayoutQueue(bookKey).schedule('compactMarginRightPx', () =>
+      saveViewSettings(
+        envConfig,
+        bookKey,
+        'compactMarginRightPx',
+        compactMarginRightPx,
+        false,
+        false,
+      ),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [compactMarginRightPx]);
@@ -287,13 +328,26 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
     if (viewSettings.compactMarginPx !== undefined) {
       saveViewSettings(envConfig, bookKey, 'compactMarginPx', undefined, false, false);
     }
-    saveViewSettings(envConfig, bookKey, 'compactMarginLeftPx', compactMarginLeftPx, false, false);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('compactMarginLeftPx', () =>
+      saveViewSettings(
+        envConfig,
+        bookKey,
+        'compactMarginLeftPx',
+        compactMarginLeftPx,
+        false,
+        false,
+      ),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [compactMarginLeftPx]);
 
   useEffect(() => {
     if (gapPercent === viewSettings.gapPercent) return;
-    saveViewSettings(envConfig, bookKey, 'gapPercent', gapPercent, false, false);
+    // Readalong: one relayout at a time (readalong/useLiveRelayout.ts).
+    getRelayoutQueue(bookKey).schedule('gapPercent', () =>
+      saveViewSettings(envConfig, bookKey, 'gapPercent', gapPercent, false, false),
+    );
     view?.renderer.setAttribute('gap', `${gapPercent}%`);
     if (viewSettings.scrolled) {
       view?.renderer.setAttribute('flow', 'scrolled');

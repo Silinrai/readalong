@@ -20,6 +20,7 @@ import { MarginsCard } from './MarginsCard';
 import { OptionChips } from './OptionChips';
 import { currentTypeface, typefacePatch, TYPEFACES } from './typeface';
 import type { TTSHighlightStyle } from '@/components/settings/theme/TTSHighlightStyleEditor';
+import { applyViewSettingsPatch } from '@/readalong/settingsPatch';
 import { OptionsCard, SliderRow } from './SliderRow';
 
 type Props = {
@@ -42,7 +43,18 @@ type NumericKey =
   | 'letterSpacing'
   | 'wordSpacing';
 
-const TEXT_KEYS: NumericKey[] = ['defaultFontSize', 'textStrokePx', 'textShadowLevel'];
+// The Text card's Reset covers the whole card: size, boldness, shadow and
+// its typeface, alignment and hyphenation chips.
+const TEXT_KEYS: (keyof ViewSettings)[] = [
+  'defaultFontSize',
+  'textStrokePx',
+  'textShadowLevel',
+  'defaultFont',
+  'serifFont',
+  'sansSerifFont',
+  'fullJustification',
+  'hyphenation',
+];
 const SPACING_KEYS: NumericKey[] = [
   'paragraphMargin',
   'lineHeight',
@@ -75,6 +87,9 @@ export const VisualOptionsSheet = ({
   const viewSettings = getViewSettings(bookKey);
   if (!viewSettings) return null;
 
+  // Settings > Layout > Use Book Layout: the book's own spacing and
+  // alignment apply, so these controls would do nothing.
+  const bookLayout = !!viewSettings.useBookLayout;
   const twoPages = pose === 'inner-landscape' || (getView(bookKey)?.renderer.columnCount ?? 1) > 1;
 
   const saveLive = (key: NumericKey, value: number) => {
@@ -82,16 +97,16 @@ export const VisualOptionsSheet = ({
     relayout.schedule(key, () => saveViewSettings(envConfig, bookKey, key, value));
   };
 
-  const resetKeys = (keys: NumericKey[]) => {
+  // A reset is one change: one restyle and one save for all its keys.
+  const resetKeys = (keys: (keyof ViewSettings)[]) => {
     const defaults = appService?.getDefaultViewSettings();
     if (!defaults) return;
+    const patch: Partial<ViewSettings> = {};
+    for (const key of keys) {
+      (patch as Record<string, unknown>)[key] = defaults[key];
+    }
     relayout.schedule(`reset-${keys[0]}`, async () => {
-      for (const key of keys) {
-        const value = defaults[key] as ViewSettings[NumericKey];
-        if (getViewSettings(bookKey)?.[key] !== value) {
-          await saveViewSettings(envConfig, bookKey, key, value);
-        }
-      }
+      await applyViewSettingsPatch(envConfig, bookKey, patch);
       setVersion((v) => v + 1);
     });
   };
@@ -108,14 +123,7 @@ export const VisualOptionsSheet = ({
   // Several settings in one change, restyled once.
   const savePatch = (key: string, patch: Partial<ViewSettings>) => {
     relayout.schedule(key, async () => {
-      for (const [name, value] of Object.entries(patch) as [
-        keyof ViewSettings,
-        ViewSettings[keyof ViewSettings],
-      ][]) {
-        if (getViewSettings(bookKey)?.[name] !== value) {
-          await saveViewSettings(envConfig, bookKey, name, value);
-        }
-      }
+      await applyViewSettingsPatch(envConfig, bookKey, patch);
       setVersion((v) => v + 1);
     });
   };
@@ -183,6 +191,7 @@ export const VisualOptionsSheet = ({
               { value: 'left', label: _('Left') },
             ]}
             value={viewSettings.fullJustification ? 'justify' : 'left'}
+            disabled={bookLayout}
             onChange={(v) => savePatch('alignment', { fullJustification: v === 'justify' })}
           />
           <OptionChips
@@ -192,6 +201,7 @@ export const VisualOptionsSheet = ({
               { value: 'off', label: _('Off') },
             ]}
             value={viewSettings.hyphenation ? 'on' : 'off'}
+            disabled={bookLayout}
             onChange={(v) => savePatch('hyphenation', { hyphenation: v === 'on' })}
           />
           <SliderRow
@@ -221,6 +231,11 @@ export const VisualOptionsSheet = ({
         </OptionsCard>
 
         <OptionsCard title={_('Spacing')} onReset={() => resetKeys(SPACING_KEYS)}>
+          {bookLayout && (
+            <p className='text-base-content/70 px-1 text-xs'>
+              {_("Using the book's own layout (Settings > Layout).")}
+            </p>
+          )}
           <SliderRow
             label={_('Paragraph Spacing')}
             value={viewSettings.paragraphMargin}
@@ -229,6 +244,7 @@ export const VisualOptionsSheet = ({
             step={0.1}
             format={fixed(1)}
             onChange={(v) => saveLive('paragraphMargin', v)}
+            disabled={bookLayout}
           />
           <SliderRow
             label={_('Line Spacing')}
@@ -238,6 +254,7 @@ export const VisualOptionsSheet = ({
             step={0.1}
             format={fixed(1)}
             onChange={(v) => saveLive('lineHeight', v)}
+            disabled={bookLayout}
           />
           <SliderRow
             label={_('Letter Spacing')}
@@ -247,6 +264,7 @@ export const VisualOptionsSheet = ({
             step={0.5}
             format={fixed(1)}
             onChange={(v) => saveLive('letterSpacing', v)}
+            disabled={bookLayout}
           />
           <SliderRow
             label={_('Word Spacing')}
@@ -256,6 +274,7 @@ export const VisualOptionsSheet = ({
             step={0.5}
             format={fixed(1)}
             onChange={(v) => saveLive('wordSpacing', v)}
+            disabled={bookLayout}
           />
         </OptionsCard>
 

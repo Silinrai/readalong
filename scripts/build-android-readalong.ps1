@@ -60,6 +60,13 @@ try {
     Copy-Item (Join-Path $keep '*') $gen -Recurse -Force
   }
 
+  # --- Readalong changes to the generated project (MainActivity) -----------
+  $py2 = (Get-Command python -ErrorAction SilentlyContinue).Source
+  if ($py2) {
+    & $py2 (Join-Path $appRoot 'scripts\android-patches.py')
+    if ($LASTEXITCODE) { throw 'android-patches.py failed' }
+  } else { throw 'Python not found: needed for scripts\android-patches.py' }
+
   # --- Readalong icons (launcher, themed icon, startup screen) -------------
   # gen/android isn't in git, so write them on every build from data/icons.
   $py = (Get-Command python -ErrorAction SilentlyContinue).Source

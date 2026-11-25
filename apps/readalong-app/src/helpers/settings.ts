@@ -4,6 +4,7 @@ import { EnvConfigType } from '@/services/environment';
 import { useBookDataStore } from '@/store/bookDataStore';
 import { useReaderStore } from '@/store/readerStore';
 import { useSettingsStore } from '@/store/settingsStore';
+import { useCustomFontStore } from '@/store/customFontStore';
 import { getStyles } from '@/utils/style';
 
 /**
@@ -77,11 +78,17 @@ export const saveViewSettings = async <K extends keyof ViewSettings>(
       setViewSettings(bookKey, viewSettings);
       if (applyStyles) {
         const view = getView(bookKey);
-        view?.renderer.setStyles?.(getStyles(viewSettings));
+        // Readalong: with the loaded custom fonts inlined, as the viewer
+        // does, so later chapters don't flash the fallback font.
+        view?.renderer.setStyles?.(
+          getStyles(viewSettings, undefined, useCustomFontStore.getState().getLoadedFonts()),
+        );
       }
       const config = getConfig(bookKey);
       if (viewState?.isPrimary && config) {
-        await saveConfig(envConfig, bookKey, config, settings);
+        // The settings now in effect: measured against the old global, a
+        // global change was written into this book's file as its own value.
+        await saveConfig(envConfig, bookKey, config, useSettingsStore.getState().settings);
       }
     }
   };

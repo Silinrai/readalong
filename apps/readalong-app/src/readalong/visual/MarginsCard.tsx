@@ -11,6 +11,7 @@ import { saveViewSettings } from '@/helpers/settings';
 import type { ViewSettings } from '@/types/book';
 import { useLiveRelayout } from '../useLiveRelayout';
 import { marginFields, marginPatch, marginValue, type MarginSide } from './marginFields';
+import { applyViewSettingsPatch } from '@/readalong/settingsPatch';
 import { OptionsCard, SliderRow } from './SliderRow';
 
 const MAX_MARGIN_PX = 120;
@@ -36,12 +37,11 @@ export const MarginsCard = ({ bookKey, showInnerGap }: Props) => {
   const linkedLR = !!viewSettings.linkLeftRightMargins;
   const linkedTB = !!viewSettings.linkTopBottomMargins;
 
-  const savePatch = (patch: Partial<ViewSettings>) =>
-    (Object.entries(patch) as [keyof ViewSettings, ViewSettings[keyof ViewSettings]][]).reduce(
-      (done, [key, value]) =>
-        done.then(() => saveViewSettings(envConfig, bookKey, key, value, false, false)),
-      Promise.resolve(),
-    );
+  // One change for a linked pair (and the old single-margin keys it
+  // clears): one inset change and one save, not one per key.
+  const savePatch = async (patch: Partial<ViewSettings>) => {
+    await applyViewSettingsPatch(envConfig, bookKey, patch);
+  };
 
   const setSide = (side: MarginSide, value: number) => {
     const current = getViewSettings(bookKey);

@@ -110,6 +110,33 @@ export const ensureMainLibraryWindow = async (appService: AppService) => {
   });
 };
 
+// Readalong: the reader is pushed on top of the library, so closing it must
+// pop back to that entry. Replacing it left [library, library] in history,
+// and the next Back on the library re-navigated instead of leaving the app.
+const READER_FROM_LIBRARY_KEY = 'readerPushedFromLibrary';
+
+const markReaderPushedFromLibrary = () => {
+  if (typeof window === 'undefined') return;
+  try {
+    const path = window.location.pathname;
+    if (path === '/' || path === '/library') sessionStorage.setItem(READER_FROM_LIBRARY_KEY, '1');
+    else sessionStorage.removeItem(READER_FROM_LIBRARY_KEY);
+  } catch {
+    // sessionStorage unavailable: closing falls back to replacing.
+  }
+};
+
+/** Was the open reader pushed from the library? Clears the mark. */
+export const takeReaderPushedFromLibrary = (): boolean => {
+  try {
+    const pushed = sessionStorage.getItem(READER_FROM_LIBRARY_KEY) === '1';
+    sessionStorage.removeItem(READER_FROM_LIBRARY_KEY);
+    return pushed;
+  } catch {
+    return false;
+  }
+};
+
 export const navigateToReader = (
   router: ReturnType<typeof useRouter>,
   bookIds: string[],
@@ -117,6 +144,7 @@ export const navigateToReader = (
   navOptions?: { scroll?: boolean },
 ) => {
   const ids = bookIds.join(BOOK_IDS_SEPARATOR);
+  markReaderPushedFromLibrary();
   if (isWebAppPlatform() && !isPWA()) {
     router.push(`/reader/${ids}${queryParams ? `?${queryParams}` : ''}`, navOptions);
   } else {

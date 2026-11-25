@@ -271,16 +271,24 @@ class Worker:
                                   elapsed_seconds=base_elapsed + time.time() - started)
         finally:
             self.current = None
+            # A cancel that arrived before the job's first check would
+            # otherwise cancel a later retry of it.
+            self._cancel.discard(job.id)
 
     def _default_out(self, job: Job) -> Path:
         from epub_extract import safe_name  # noqa: PLC0415 (poc module on sys.path)
         base = POC / "out" / safe_name(Path(job.filename or job.title).stem)
-        # Another book already writes there: keep them apart.
+        # Another book, or the same book in another voice, already writes
+        # there: keep them apart. (A bare checksum is the older marker.)
+        key = f"{job.checksum}:{job.profile}" if job.profile else job.checksum
         marker = base / ".genqueue-checksum"
-        if base.exists() and marker.exists() and marker.read_text().strip() != job.checksum:
-            base = base.with_name(f"{base.name}-{job.checksum[:8]}")
+        if base.exists() and marker.exists() and marker.read_text().strip() not in {key, job.checksum}:
+            suffix = f"-{job.checksum[:8]}"
+            if job.profile:
+                suffix += f"-{safe_name(job.profile)[:16]}"
+            base = base.with_name(f"{base.name}{suffix}")
         base.mkdir(parents=True, exist_ok=True)
-        (base / ".genqueue-checksum").write_text(job.checksum)
+        (base / ".genqueue-checksum").write_text(key)
         return base
 
     def _set_priority(self) -> None:

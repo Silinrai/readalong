@@ -145,7 +145,11 @@ export class TTSMediaBridge {
       this.#meta = meta;
       return;
     }
-    this.unbind();
+    // Restarting narration in the same book makes a new controller for the
+    // same session: keep the native media session (and its notification)
+    // instead of a deactivate/activate pair whose order isn't guaranteed and
+    // could remove the notification for good.
+    this.unbind({ keepNativeSession: this.#meta?.bookKey === meta.bookKey });
     const bindingId = ++this.#bindingId;
     this.#controller = controller;
     this.#meta = meta;
@@ -230,7 +234,7 @@ export class TTSMediaBridge {
     }
   }
 
-  unbind(): void {
+  unbind({ keepNativeSession = false }: { keepNativeSession?: boolean } = {}): void {
     ++this.#bindingId;
     if (this.#controller) {
       if (this.#onSpeakMark) {
@@ -260,7 +264,7 @@ export class TTSMediaBridge {
           // Unsupported actions on this engine.
         }
       }
-      if (mediaSession instanceof TauriMediaSession) {
+      if (mediaSession instanceof TauriMediaSession && !keepNativeSession) {
         void mediaSession.setActive({ active: false, sessionId: this.#meta?.bookKey });
       }
     }
@@ -354,13 +358,18 @@ export class TTSMediaBridge {
     });
     mediaSession.setActionHandler('seekforward', () => void controller()?.forward(true));
     mediaSession.setActionHandler('seekbackward', () => void controller()?.backward(true));
+    // Readalong: Next/Previous on the notification, lock screen and headset
+    // step one sentence (byMark), like the in-app buttons; a recording timed
+    // by chapter only keeps its own transport step.
     mediaSession.setActionHandler('nexttrack', () => {
       this.#beginSkip();
-      void controller()?.forward();
+      const ctrl = controller();
+      void ctrl?.forward(!ctrl.usesAudioTransport?.());
     });
     mediaSession.setActionHandler('previoustrack', () => {
       this.#beginSkip();
-      void controller()?.backward();
+      const ctrl = controller();
+      void ctrl?.backward(!ctrl.usesAudioTransport?.());
     });
     if (mediaSession instanceof TauriMediaSession) {
       mediaSession.setActionHandler('seekto', ((positionMs: number) => {

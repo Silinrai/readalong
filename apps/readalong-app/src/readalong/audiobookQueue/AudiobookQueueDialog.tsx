@@ -9,6 +9,7 @@ import {
   MdCancel,
   MdClose,
   MdDeleteSweep,
+  MdDownload,
   MdPause,
   MdPlayArrow,
   MdRefresh,
@@ -37,7 +38,8 @@ import {
   summaryLine,
   type Tone,
 } from './format';
-import { useAudiobookQueueStore } from './queueStore';
+import { canHideJob, isUploadCutOff, useAudiobookQueueStore } from './queueStore';
+import { eventDispatcher } from '@/utils/event';
 import { FINISHED_STATES, QUEUED_STATES, type QueueJob } from './types';
 import { useQueueClient } from './useQueueConnection';
 
@@ -89,6 +91,11 @@ const ConnectForm: React.FC<{ onConnected: () => void }> = ({ onConnected }) => 
     try {
       const client = new QueueClient(base, token.trim());
       await client.status();
+      // Another PC: drop what the old one showed.
+      const saved = useSettingsStore.getState().settings;
+      if (saved.audiobookQueueUrl !== base || saved.audiobookQueueToken !== token.trim()) {
+        useAudiobookQueueStore.getState().reset();
+      }
       await saveSysSettings(envConfig, 'audiobookQueueUrl', base);
       await saveSysSettings(envConfig, 'audiobookQueueToken', token.trim());
       onConnected();
@@ -153,8 +160,20 @@ const JobRow: React.FC<{ job: QueueJob; client: QueueClient; busy: boolean }> = 
 }) => {
   const _ = useTranslation();
   const act = useAudiobookQueueStore((s) => s.act);
+  const importError = useAudiobookQueueStore((s) => s.importErrors[job.id]);
+  const { envConfig } = useEnv();
+  const imported = useSettingsStore((s) => s.settings.audiobookQueueImported);
   const queued = QUEUED_STATES.includes(job.state);
   const finished = FINISHED_STATES.includes(job.state);
+  const wasImported = !!imported?.[job.id];
+  // Bring a finished audiobook in again (it was deleted from the library,
+  // or importing it failed): forget it was imported and check right away.
+  const importAgain = async () => {
+    const next = { ...(useSettingsStore.getState().settings.audiobookQueueImported ?? {}) };
+    delete next[job.id];
+    await saveSysSettings(envConfig, 'audiobookQueueImported', next);
+    eventDispatcher.dispatch('readalong-queue-import-now', {});
+  };
   const pct = job.progress.actual.percent;
   const detail = [actualLine(_, job.progress, job.state), elapsedLine(_, job)]
     .filter(Boolean)
@@ -206,6 +225,11 @@ const JobRow: React.FC<{ job: QueueJob; client: QueueClient; busy: boolean }> = 
         </p>
         {estimate && <p className='text-base-content/60 text-xs italic'>{estimate}</p>}
         {job.error && <p className='text-error mt-1 text-xs'>{job.error}</p>}
+        {importError && (
+          <p className='text-error mt-1 text-xs'>
+            {_("Couldn't bring this into the library: {{error}}", { error: importError })}
+          </p>
+        )}
         <div className='-ms-2 mt-1 flex flex-wrap'>
           {queued && (
             <>
@@ -241,7 +265,7 @@ const JobRow: React.FC<{ job: QueueJob; client: QueueClient; busy: boolean }> = 
               <MdCancel size={20} />
             </IconButton>
           )}
-          {(job.state === 'failed' || job.state === 'cancelled') && (
+          {(job.state === 'failed' || job.state === 'cancelled') && !isUploadCutOff(job) && (
             <IconButton
               label={_('Retry')}
               disabled={busy}
@@ -250,7 +274,16 @@ const JobRow: React.FC<{ job: QueueJob; client: QueueClient; busy: boolean }> = 
               <MdReplay size={20} />
             </IconButton>
           )}
-          {finished && (
+          {job.state === 'completed' && job.has_output && (wasImported || importError) && (
+            <IconButton
+              label={_('Import Again')}
+              disabled={busy}
+              onClick={() => void importAgain()}
+            >
+              <MdDownload size={20} />
+            </IconButton>
+          )}
+          {canHideJob(job, imported) && (
             <IconButton
               label={_('Remove from List')}
               disabled={busy}
@@ -269,8 +302,11 @@ const PcSettings: React.FC<{ client: QueueClient }> = ({ client }) => {
   const _ = useTranslation();
   const { status, act } = useAudiobookQueueStore();
   const s = status?.settings;
-  const [hours, setHours] = useState((s?.windows ?? []).join(', '));
-  useEffect(() => setHours((s?.windows ?? []).join(', ')), [s?.windows]);
+  // Follow the PC's value, not each poll's new array (that wiped the field
+  // while typing every few seconds).
+  const serverHours = (s?.windows ?? []).join(', ');
+  const [hours, setHours] = useState(serverHours);
+  useEffect(() => setHours(serverHours), [serverHours]);
   if (!s) return null;
   const saveHours = () => {
     const windows = hours
@@ -332,8 +368,13 @@ interface Props {
 const AudiobookQueueDialog: React.FC<Props> = ({ isOpen, onClose }) => {
   const _ = useTranslation();
   const client = useQueueClient();
-  const { status, error, uploads, busy, updatedAt, refresh, act } = useAudiobookQueueStore();
+  const { status, error, errorStatus, uploads, busy, updatedAt, refresh, act, dismissUpload } =
+    useAudiobookQueueStore();
+  const imported = useSettingsStore((s) => s.settings.audiobookQueueImported);
   const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    if (!isOpen) setEditing(false);
+  }, [isOpen]);
   const [, tick] = useState(0);
 
   const poll = useCallback(() => {
@@ -352,7 +393,9 @@ const AudiobookQueueDialog: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const showConnect = !client || editing;
   const jobs = status?.jobs ?? [];
-  const finishedCount = jobs.filter((j) => FINISHED_STATES.includes(j.state)).length;
+  // Clear Finished leaves completed audiobooks the phone hasn't imported yet.
+  const hideable = jobs.filter((j) => canHideJob(j, imported));
+  const finishedCount = hideable.length;
   const waitingCount = jobs.filter((j) => QUEUED_STATES.includes(j.state)).length;
   const stale = updatedAt && Date.now() - updatedAt > 3 * POLL_MS;
 
@@ -384,7 +427,12 @@ const AudiobookQueueDialog: React.FC<Props> = ({ isOpen, onClose }) => {
                 )}
                 {error && (
                   <p role='alert' className='text-error text-sm'>
-                    {stale || !status ? _("Can't reach the PC: {{error}}", { error }) : error}
+                    {errorStatus === 401
+                      ? _(
+                          'The pairing code was rejected. Tap Change PC and enter the code from python -m genqueue code.',
+                        )
+                      : error}
+                    {stale && status ? ` ${_('Showing the last list the PC sent.')}` : ''}
                   </p>
                 )}
               </section>
@@ -424,7 +472,12 @@ const AudiobookQueueDialog: React.FC<Props> = ({ isOpen, onClose }) => {
                     type='button'
                     className='btn btn-sm btn-ghost min-h-11 gap-1'
                     disabled={busy}
-                    onClick={() => void act(client, () => client.clearFinished())}
+                    onClick={() =>
+                      void act(client, async () => {
+                        for (const j of hideable) await client.hide(j.id);
+                        return client.status();
+                      })
+                    }
                   >
                     <MdDeleteSweep size={18} /> {_('Clear Finished')}
                   </button>
@@ -446,16 +499,25 @@ const AudiobookQueueDialog: React.FC<Props> = ({ isOpen, onClose }) => {
                       key={u.key}
                       className='border-base-content/10 flex items-center gap-3 border-b px-3 py-3'
                     >
-                      <span className='min-w-0 flex-1 truncate text-sm'>{u.title}</span>
+                      <span className='min-w-0 flex-1'>
+                        <span className='block truncate text-sm'>{u.title}</span>
+                        {u.state === 'failed' && u.error && (
+                          <span className='text-error block text-xs'>{u.error}</span>
+                        )}
+                      </span>
                       <span
                         className={clsx(
                           'rounded-full px-2 py-0.5 text-xs font-medium',
                           toneClass[u.state === 'failed' ? 'error' : 'active'],
                         )}
-                        title={u.error}
                       >
                         {u.state === 'failed' ? _('Upload failed') : _('Uploading')}
                       </span>
+                      {u.state === 'failed' && (
+                        <IconButton label={_('Dismiss')} onClick={() => dismissUpload(u.key)}>
+                          <MdClose size={20} />
+                        </IconButton>
+                      )}
                     </li>
                   ))}
                   {jobs.map((job) => (
