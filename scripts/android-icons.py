@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw, ImageFilter
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ICONS = ROOT / 'data' / 'icons'
 RES = ROOT / 'apps' / 'readalong-app' / 'src-tauri' / 'gen' / 'android' / 'app' / 'src' / 'main' / 'res'
-BG = '#09070c'
+BG = '#100b14'
 
 launcher = Image.open(ICONS / 'readalong-book.png').convert('RGBA')
 logo = Image.open(ICONS / 'readalong-logo.png').convert('RGBA')
@@ -54,21 +54,14 @@ for name, k in {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}.i
     f'<?xml version="1.0" encoding="utf-8"?>\n<resources>\n'
     f'  <color name="ic_launcher_background">{BG}</color>\n</resources>\n', encoding='utf-8', newline='\n')
 
-# Startup screen: the artwork on transparent, over the icon's near-black.
-alpha = gray.point(lambda v: 0 if v < 22 else min(255, (v - 22) * 4)).filter(ImageFilter.GaussianBlur(1.2))
-art = launcher.copy()
-art.putalpha(alpha)
-art = art.crop(alpha.point(lambda v: 255 if v > 40 else 0).getbbox())
-k = 0.98 * 480 / max(art.size)
-art = art.resize((round(art.size[0] * k), round(art.size[1] * k)), Image.LANCZOS)
-splash = Image.new('RGBA', (480, 480), (0, 0, 0, 0))
-splash.alpha_composite(art, ((480 - art.size[0]) // 2, (480 - art.size[1]) // 2))
+# Startup screen: the logo (its rounded square, transparent corners) over
+# the icon's near-black.
 (RES / 'drawable').mkdir(parents=True, exist_ok=True)
-splash.save(RES / 'drawable' / 'splash_icon.png')
+logo.resize((640, 640), Image.LANCZOS).save(RES / 'drawable' / 'splash_icon.png')
 (RES / 'drawable' / 'splash_background.xml').write_text(
     '<layer-list xmlns:android="http://schemas.android.com/apk/res/android">\n'
-    '    <item>\n        <color android:color="#FF09070C" />\n    </item>\n'
-    '    <item android:gravity="center" android:width="120dp" android:height="120dp">\n'
+    '    <item>\n        <color android:color="#FF100B14" />\n    </item>\n'
+    '    <item android:gravity="center" android:width="160dp" android:height="160dp">\n'
     '        <bitmap android:src="@drawable/splash_icon" />\n    </item>\n'
     '</layer-list>\n', encoding='utf-8', newline='\n')
 print('Readalong Android icons written to', RES)

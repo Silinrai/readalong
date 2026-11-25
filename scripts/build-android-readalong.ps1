@@ -64,7 +64,7 @@ try {
   # gen/android isn't in git, so write them on every build from data/icons.
   $py = (Get-Command python -ErrorAction SilentlyContinue).Source
   if ($py) {
-    & $py (Join-Path $appRoot 'scriptsndroid-icons.py')
+    & $py (Join-Path $appRoot 'scripts\android-icons.py')
     if ($LASTEXITCODE) { Write-Warning 'android-icons.py failed (pip install pillow); keeping the icons already there' }
   } else {
     Write-Warning 'Python not found: Readalong icons not refreshed (needs Python with Pillow)'
